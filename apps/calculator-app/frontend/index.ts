@@ -1,0 +1,1 @@
+export { GpaCalculator } from "./GpaCalculator";
