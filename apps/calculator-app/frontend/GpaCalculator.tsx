@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import catalog from "@/utils/data/course-sample.json";
 
 type CourseGrade = {
@@ -30,15 +30,53 @@ const initialCourses: CourseGrade[] = [
 
 const columnClassName = "grid grid-cols-4 gap-2 whitespace-nowrap sm:gap-8";
 
+type CatalogCourse = (typeof catalog.courses)[number];
+
+function searchCatalog(query: string) {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) {
+    return catalog.courses;
+  }
+
+  return catalog.courses.filter((course) => {
+    return (
+      course.code.toLowerCase().includes(normalized) ||
+      course.title.toLowerCase().includes(normalized)
+    );
+  });
+}
+
 export function GpaCalculator() {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [courses, setCourses] = useState(initialCourses);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<CatalogCourse[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!modalOpen) {
+      return;
+    }
+
+    setLoading(true);
+    const timeout = window.setTimeout(() => {
+      setResults(searchCatalog(query));
+      setLoading(false);
+    }, 300);
+
+    return () => window.clearTimeout(timeout);
+  }, [modalOpen, query]);
 
   function openCourseModal() {
+    setLoading(true);
+    setModalOpen(true);
     dialogRef.current?.showModal();
   }
 
   function closeCourseModal() {
+    setModalOpen(false);
+    setQuery("");
     dialogRef.current?.close();
   }
 
@@ -46,7 +84,7 @@ export function GpaCalculator() {
     setCourses((current) => current.filter((course) => course.id !== id));
   }
 
-  function addCourse(course: (typeof catalog.courses)[number]) {
+  function addCourse(course: CatalogCourse) {
     setCourses((current) => [
       ...current,
       {
@@ -130,25 +168,46 @@ export function GpaCalculator() {
             Close
           </button>
         </div>
-        <ul className="mt-4 flex flex-col gap-3">
-          {catalog.courses.map((course) => (
-            <li key={course.catalog_course_id}>
-              <button
-                type="button"
-                onClick={() => addCourse(course)}
-                className="w-full rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-left hover:bg-neutral-100"
-              >
-                <p className="text-sm font-medium">{course.code}</p>
-                <p className="mt-1 text-sm text-neutral-600">{course.title}</p>
-                <p className="mt-1 text-xs text-neutral-500">
-                  {course.units_min === course.units_max
-                    ? `${course.units_min} units`
-                    : `${course.units_min}–${course.units_max} units`}
-                </p>
-              </button>
-            </li>
-          ))}
-        </ul>
+        <label className="mt-4 block text-sm font-medium text-neutral-900">
+          Search
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => {
+              setLoading(true);
+              setQuery(event.target.value);
+            }}
+            placeholder="Search courses"
+            className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm font-normal text-neutral-900"
+          />
+        </label>
+        <div className="mt-4" aria-live="polite">
+          {!modalOpen ? null : loading ? (
+            <p className="text-sm text-neutral-500">Loading</p>
+          ) : results.length === 0 ? (
+            <p className="text-sm text-neutral-500">No courses found</p>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {results.map((course) => (
+                <li key={course.catalog_course_id}>
+                  <button
+                    type="button"
+                    onClick={() => addCourse(course)}
+                    className="w-full rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-left hover:bg-neutral-100"
+                  >
+                    <p className="text-sm font-medium">{course.code}</p>
+                    <p className="mt-1 text-sm text-neutral-600">{course.title}</p>
+                    <p className="mt-1 text-xs text-neutral-500">
+                      {course.units_min === course.units_max
+                        ? `${course.units_min} units`
+                        : `${course.units_min}–${course.units_max} units`}
+                    </p>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </dialog>
     </main>
   );
