@@ -42,6 +42,10 @@ export function GpaCalculator() {
     dialogRef.current?.close();
   }
 
+  function removeCourse(id: string) {
+    setCourses((current) => current.filter((course) => course.id !== id));
+  }
+
   function addCourse(course: (typeof catalog.courses)[number]) {
     setCourses((current) => [
       ...current,
@@ -75,24 +79,35 @@ export function GpaCalculator() {
             Add
           </button>
         </div>
-        <div
-          className={`${columnClassName} mt-4 px-[13px] text-xs text-neutral-500 sm:px-[17px] sm:text-sm`}
-        >
-          <span>Course</span>
-          <span>Semester</span>
-          <span>Letter grade</span>
-          <span>Percent grade</span>
+        <div className="mt-4 flex items-center gap-2 px-[13px] text-xs text-neutral-500 sm:px-[17px] sm:text-sm">
+          <div className={`${columnClassName} min-w-0 flex-1`}>
+            <span>Course</span>
+            <span>Semester</span>
+            <span>Letter grade</span>
+            <span>Percent grade</span>
+          </div>
+          <span className="size-6 shrink-0" aria-hidden="true" />
         </div>
         <ul className="mt-2 flex flex-col gap-3">
           {courses.map((course) => (
             <li
               key={course.id}
-              className={`${columnClassName} rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm font-medium text-neutral-900 sm:p-4 sm:text-base`}
+              className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm font-medium text-neutral-900 sm:p-4 sm:text-base"
             >
-              <span>{course.courseName}</span>
-              <span>{course.semester}</span>
-              <span>{course.letterGrade}</span>
-              <span>{course.percentGrade}</span>
+              <div className={`${columnClassName} min-w-0 flex-1`}>
+                <span>{course.courseName}</span>
+                <span>{course.semester}</span>
+                <span>{course.letterGrade}</span>
+                <span>{course.percentGrade}</span>
+              </div>
+              <button
+                type="button"
+                aria-label={`Remove ${course.courseName}`}
+                onClick={() => removeCourse(course.id)}
+                className="inline-flex size-6 shrink-0 items-center justify-center text-lg leading-none font-semibold text-red-600 hover:text-red-700"
+              >
+                ×
+              </button>
             </li>
           ))}
         </ul>
