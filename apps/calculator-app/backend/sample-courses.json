@@ -1,0 +1,26 @@
+[
+  {
+    "code": "CS 22A",
+    "title": "Python for Everyone",
+    "units_min": 3,
+    "units_max": 3,
+    "description": "Introduction to Python programming in interesting, relevant, and practical contexts. Programming skills are developed to solve problems in such fields as life sciences, mathematics, and business. Fundamental programming constructs: data structures and algorithms, iterations, and functions. Course is intended for students who have no prior programming experience.",
+    "prerequisites": null,
+    "corequisites": "CS 1022AS is required for Math Enrollment Category M-III and M-IV.",
+    "grading": "Letter Graded",
+    "notes": "Satisfies 2. Mathematical Concepts and Quantitative Reasoning (Formerly Area B4).",
+    "section": "Computer Science"
+  },
+  {
+    "code": "CS 22B",
+    "title": "Python Programming for Data Analysis",
+    "units_min": 3,
+    "units_max": 3,
+    "description": "Hands-on Python programming skills for data analysis. Skills include finding a solution for a given problem and casting it as an algorithm, translating an algorithm to executable code, and debugging and testing code. Applications focus on computational techniques to understand, analyze, and visualize data.",
+    "prerequisites": "CS 22A with a grade of C- or better, or consent of the instructor; Allowed Majors: Data Science, Biology (all) or Chemistry (all).",
+    "corequisites": null,
+    "grading": "Letter Graded",
+    "notes": null,
+    "section": "Computer Science"
+  }
+]
