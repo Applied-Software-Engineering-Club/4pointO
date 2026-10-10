@@ -6,29 +6,78 @@ import catalog from "@/utils/data/course-sample.json";
 type CourseGrade = {
   id: string;
   courseName: string;
-  semester: string;
+  season: string;
+  year: string;
   letterGrade: string;
   percentGrade: string;
 };
+
+const letterGrades = [
+  "A+",
+  "A",
+  "A-",
+  "B+",
+  "B",
+  "B-",
+  "C+",
+  "C",
+  "C-",
+  "D+",
+  "D",
+  "D-",
+  "F",
+  "CR",
+  "NC",
+  "W",
+  "WU",
+  "I",
+];
+
+const seasons = ["Fall", "Spring", "Summer"];
+const defaultYear = String(new Date().getFullYear());
 
 const initialCourses: CourseGrade[] = [
   {
     id: "cs-151",
     courseName: "CS 151",
-    semester: "Fall 2026",
+    season: "Fall",
+    year: "2026",
     letterGrade: "B+",
-    percentGrade: "89.51%",
+    percentGrade: "89.51",
   },
   {
     id: "cs-160",
     courseName: "CS 160",
-    semester: "Fall 2026",
+    season: "Fall",
+    year: "2026",
     letterGrade: "B+",
-    percentGrade: "89.51%",
+    percentGrade: "89.51",
   },
 ];
 
 const columnClassName = "grid grid-cols-4 gap-2 whitespace-nowrap sm:gap-8";
+const controlClassName =
+  "cursor-pointer appearance-none justify-self-start border-0 bg-transparent bg-[length:0.65rem] bg-[position:right_center] bg-no-repeat p-0 pr-[0.85rem] font-medium text-inherit outline-none";
+const dropdownArrow = {
+  backgroundImage:
+    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' stroke='%23737373' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")",
+};
+
+function dropdownWidth(label: string) {
+  return `calc(${Math.max(label.length, 1)}ch + 0.85rem)`;
+}
+
+function isYearDraft(value: string) {
+  return /^\d{0,4}$/.test(value);
+}
+
+function isPercentDraft(value: string) {
+  if (value === "") {
+    return true;
+  }
+
+  return /^\d{1,3}(\.\d{0,2})?$/.test(value) && Number(value) <= 100;
+}
 
 type CatalogCourse = (typeof catalog.courses)[number];
 
@@ -93,15 +142,36 @@ export function GpaCalculator() {
     setCourses((current) => current.filter((course) => course.id !== id));
   }
 
+  function updateCourse(
+    id: string,
+    field: "season" | "year" | "letterGrade" | "percentGrade",
+    value: string,
+  ) {
+    if (field === "percentGrade" && !isPercentDraft(value)) {
+      return;
+    }
+
+    if (field === "year" && !isYearDraft(value)) {
+      return;
+    }
+
+    setCourses((current) =>
+      current.map((course) =>
+        course.id === id ? { ...course, [field]: value } : course,
+      ),
+    );
+  }
+
   function appendCourse(idPrefix: string, courseName: string) {
     setCourses((current) => [
       ...current,
       {
         id: `${idPrefix}-${crypto.randomUUID()}`,
         courseName,
-        semester: "—",
-        letterGrade: "—",
-        percentGrade: "—",
+        season: "Fall",
+        year: defaultYear,
+        letterGrade: "",
+        percentGrade: "",
       },
     ]);
     closeCourseModal();
@@ -164,9 +234,67 @@ export function GpaCalculator() {
             >
               <div className={`${columnClassName} min-w-0 flex-1`}>
                 <span>{course.courseName}</span>
-                <span>{course.semester}</span>
-                <span>{course.letterGrade}</span>
-                <span>{course.percentGrade}</span>
+                <span className="inline-flex items-center gap-3">
+                  <select
+                    aria-label={`Season for ${course.courseName}`}
+                    value={course.season}
+                    onChange={(event) =>
+                      updateCourse(course.id, "season", event.target.value)
+                    }
+                    className={`${controlClassName} w-fit [field-sizing:content]`}
+                    style={dropdownArrow}
+                  >
+                    {seasons.map((season) => (
+                      <option key={season} value={season}>
+                        {season}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    aria-label={`Year for ${course.courseName}`}
+                    inputMode="numeric"
+                    value={course.year}
+                    onChange={(event) =>
+                      updateCourse(course.id, "year", event.target.value)
+                    }
+                    placeholder="Year"
+                    style={{ width: "4ch" }}
+                    className="bg-transparent p-0 font-medium text-inherit outline-none placeholder:text-neutral-400"
+                  />
+                </span>
+                <select
+                  aria-label={`Letter grade for ${course.courseName}`}
+                  value={course.letterGrade}
+                  onChange={(event) =>
+                    updateCourse(course.id, "letterGrade", event.target.value)
+                  }
+                  className={controlClassName}
+                  style={{
+                    ...dropdownArrow,
+                    width: dropdownWidth(course.letterGrade || "—"),
+                  }}
+                >
+                  <option value="">—</option>
+                  {letterGrades.map((grade) => (
+                    <option key={grade} value={grade}>
+                      {grade}
+                    </option>
+                  ))}
+                </select>
+                <span className="inline-flex items-center">
+                  <input
+                    aria-label={`Percent grade for ${course.courseName}`}
+                    inputMode="decimal"
+                    value={course.percentGrade}
+                    onChange={(event) =>
+                      updateCourse(course.id, "percentGrade", event.target.value)
+                    }
+                    placeholder="—"
+                    style={{ width: `${Math.max(course.percentGrade.length, 1)}ch` }}
+                    className="bg-transparent p-0 font-medium text-inherit outline-none placeholder:text-neutral-900"
+                  />
+                  {course.percentGrade ? "%" : null}
+                </span>
               </div>
               <button
                 type="button"
