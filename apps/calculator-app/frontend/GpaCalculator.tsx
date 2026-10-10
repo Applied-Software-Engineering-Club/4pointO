@@ -1,117 +1,143 @@
 "use client";
 
-import { useEffect, useRef, useState, type MouseEvent } from "react";
-import catalog from "@/utils/data/course-sample.json";
+import { useRef, useState } from "react";
+import { AddCourseDialog, type AddCourseDialogHandle } from "./AddCourseDialog";
 
 type CourseGrade = {
   id: string;
   courseName: string;
-  semester: string;
+  season: string;
+  year: string;
   letterGrade: string;
   percentGrade: string;
 };
+
+const letterGrades = [
+  "A+",
+  "A",
+  "A-",
+  "B+",
+  "B",
+  "B-",
+  "C+",
+  "C",
+  "C-",
+  "D+",
+  "D",
+  "D-",
+  "F",
+  "CR",
+  "NC",
+  "W",
+  "WU",
+  "I",
+];
+
+const seasons = ["Fall", "Spring", "Summer"];
+const defaultYear = String(new Date().getFullYear());
 
 const initialCourses: CourseGrade[] = [
   {
     id: "cs-151",
     courseName: "CS 151",
-    semester: "Fall 2026",
+    season: "Fall",
+    year: "2026",
     letterGrade: "B+",
-    percentGrade: "89.51%",
+    percentGrade: "89.51",
   },
   {
     id: "cs-160",
     courseName: "CS 160",
-    semester: "Fall 2026",
+    season: "Fall",
+    year: "2026",
     letterGrade: "B+",
-    percentGrade: "89.51%",
+    percentGrade: "89.51",
   },
 ];
 
 const columnClassName = "grid grid-cols-4 gap-2 whitespace-nowrap sm:gap-8";
+const controlClassName =
+  "cursor-pointer appearance-none justify-self-start border-0 bg-transparent bg-[length:0.65rem] bg-[position:right_center] bg-no-repeat p-0 pr-[0.85rem] font-medium text-inherit outline-none";
+const dropdownArrow = {
+  backgroundImage:
+    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' stroke='%23737373' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")",
+};
 
-type CatalogCourse = (typeof catalog.courses)[number];
+function dropdownWidth(label: string) {
+  return `calc(${Math.max(label.length, 1)}ch + 0.85rem)`;
+}
 
-function searchCatalog(query: string) {
-  const normalized = query.trim().toLowerCase();
-  if (!normalized) {
-    return catalog.courses;
+function isYearDraft(value: string) {
+  return /^\d{0,4}$/.test(value);
+}
+
+function isPercentDraft(value: string) {
+  if (value === "") {
+    return true;
   }
 
-  return catalog.courses.filter((course) => {
-    return (
-      course.code.toLowerCase().includes(normalized) ||
-      course.title.toLowerCase().includes(normalized)
-    );
-  });
+  return /^\d{1,3}(\.\d{0,2})?$/.test(value) && Number(value) <= 100;
 }
 
 export function GpaCalculator() {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const addCourseDialogRef = useRef<AddCourseDialogHandle>(null);
   const [courses, setCourses] = useState(initialCourses);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<CatalogCourse[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!modalOpen) {
-      return;
-    }
-
-    setLoading(true);
-    const timeout = window.setTimeout(() => {
-      setResults(searchCatalog(query));
-      setLoading(false);
-    }, 300);
-
-    return () => window.clearTimeout(timeout);
-  }, [modalOpen, query]);
-
-  function openCourseModal() {
-    setLoading(true);
-    setModalOpen(true);
-    dialogRef.current?.showModal();
-  }
-
-  function closeCourseModal() {
-    setModalOpen(false);
-    setQuery("");
-    dialogRef.current?.close();
-  }
+  const [editing, setEditing] = useState(false);
 
   function removeCourse(id: string) {
     setCourses((current) => current.filter((course) => course.id !== id));
   }
 
-  function addCourse(course: CatalogCourse) {
+  function updateCourse(
+    id: string,
+    field: "season" | "year" | "letterGrade" | "percentGrade",
+    value: string,
+  ) {
+    if (field === "percentGrade" && !isPercentDraft(value)) {
+      return;
+    }
+
+    if (field === "year" && !isYearDraft(value)) {
+      return;
+    }
+
+    setCourses((current) =>
+      current.map((course) =>
+        course.id === id ? { ...course, [field]: value } : course,
+      ),
+    );
+  }
+
+  function appendCourse(idPrefix: string, courseName: string) {
     setCourses((current) => [
       ...current,
       {
-        id: `${course.catalog_course_id}-${crypto.randomUUID()}`,
-        courseName: course.code,
-        semester: "—",
-        letterGrade: "—",
-        percentGrade: "—",
+        id: `${idPrefix}-${crypto.randomUUID()}`,
+        courseName,
+        season: "Fall",
+        year: defaultYear,
+        letterGrade: "",
+        percentGrade: "",
       },
     ]);
-    closeCourseModal();
-  }
-
-  function closeOnBackdropClick(event: MouseEvent<HTMLDialogElement>) {
-    if (event.target === event.currentTarget) {
-      event.currentTarget.close();
-    }
   }
 
   return (
     <main className="flex-1 bg-white px-6 py-6">
       <section aria-label="Course grades">
         <h1 className="text-lg font-semibold text-neutral-900">Courses</h1>
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex justify-end gap-2">
           <button
             type="button"
-            onClick={openCourseModal}
+            aria-pressed={editing}
+            onClick={() => setEditing((current) => !current)}
+            className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-900 shadow-sm hover:bg-neutral-50"
+          >
+            {editing ? "Done" : "Edit"}
+          </button>
+          <button
+            type="button"
+            onClick={() => addCourseDialogRef.current?.open()}
             className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-900 shadow-sm hover:bg-neutral-50"
           >
             Add
@@ -134,9 +160,79 @@ export function GpaCalculator() {
             >
               <div className={`${columnClassName} min-w-0 flex-1`}>
                 <span>{course.courseName}</span>
-                <span>{course.semester}</span>
-                <span>{course.letterGrade}</span>
-                <span>{course.percentGrade}</span>
+                {editing ? (
+                  <span className="inline-flex items-center gap-3">
+                    <select
+                      aria-label={`Season for ${course.courseName}`}
+                      value={course.season}
+                      onChange={(event) =>
+                        updateCourse(course.id, "season", event.target.value)
+                      }
+                      className={`${controlClassName} w-fit [field-sizing:content]`}
+                      style={dropdownArrow}
+                    >
+                      {seasons.map((season) => (
+                        <option key={season} value={season}>
+                          {season}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      aria-label={`Year for ${course.courseName}`}
+                      inputMode="numeric"
+                      value={course.year}
+                      onChange={(event) =>
+                        updateCourse(course.id, "year", event.target.value)
+                      }
+                      placeholder="Year"
+                      style={{ width: "4ch" }}
+                      className="bg-transparent p-0 font-medium text-inherit outline-none placeholder:text-neutral-400"
+                    />
+                  </span>
+                ) : (
+                  <span>{[course.season, course.year].filter(Boolean).join(" ") || "—"}</span>
+                )}
+                {editing ? (
+                  <select
+                    aria-label={`Letter grade for ${course.courseName}`}
+                    value={course.letterGrade}
+                    onChange={(event) =>
+                      updateCourse(course.id, "letterGrade", event.target.value)
+                    }
+                    className={controlClassName}
+                    style={{
+                      ...dropdownArrow,
+                      width: dropdownWidth(course.letterGrade || "—"),
+                    }}
+                  >
+                    <option value="">—</option>
+                    {letterGrades.map((grade) => (
+                      <option key={grade} value={grade}>
+                        {grade}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span>{course.letterGrade || "—"}</span>
+                )}
+                {editing ? (
+                  <span className="inline-flex items-center">
+                    <input
+                      aria-label={`Percent grade for ${course.courseName}`}
+                      inputMode="decimal"
+                      value={course.percentGrade}
+                      onChange={(event) =>
+                        updateCourse(course.id, "percentGrade", event.target.value)
+                      }
+                      placeholder="—"
+                      style={{ width: `${Math.max(course.percentGrade.length, 1)}ch` }}
+                      className="bg-transparent p-0 font-medium text-inherit outline-none placeholder:text-neutral-900"
+                    />
+                    {course.percentGrade ? "%" : null}
+                  </span>
+                ) : (
+                  <span>{course.percentGrade ? `${course.percentGrade}%` : "—"}</span>
+                )}
               </div>
               <button
                 type="button"
@@ -150,65 +246,7 @@ export function GpaCalculator() {
           ))}
         </ul>
       </section>
-      <dialog
-        ref={dialogRef}
-        aria-labelledby="add-course-title"
-        onClick={closeOnBackdropClick}
-        className="fixed inset-0 m-auto h-fit max-h-[min(32rem,calc(100vh-3rem))] w-full max-w-lg overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-4 text-neutral-900 shadow-lg backdrop:bg-neutral-900/40"
-      >
-        <div className="flex items-center justify-between gap-4">
-          <h2 id="add-course-title" className="text-lg font-semibold">
-            Add a course
-          </h2>
-          <button
-            type="button"
-            onClick={closeCourseModal}
-            className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-900 shadow-sm hover:bg-neutral-50"
-          >
-            Close
-          </button>
-        </div>
-        <label className="mt-4 block text-sm font-medium text-neutral-900">
-          Search
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => {
-              setLoading(true);
-              setQuery(event.target.value);
-            }}
-            placeholder="Search courses"
-            className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm font-normal text-neutral-900"
-          />
-        </label>
-        <div className="mt-4" aria-live="polite">
-          {!modalOpen ? null : loading ? (
-            <p className="text-sm text-neutral-500">Loading</p>
-          ) : results.length === 0 ? (
-            <p className="text-sm text-neutral-500">No courses found</p>
-          ) : (
-            <ul className="flex flex-col gap-3">
-              {results.map((course) => (
-                <li key={course.catalog_course_id}>
-                  <button
-                    type="button"
-                    onClick={() => addCourse(course)}
-                    className="w-full rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-left hover:bg-neutral-100"
-                  >
-                    <p className="text-sm font-medium">{course.code}</p>
-                    <p className="mt-1 text-sm text-neutral-600">{course.title}</p>
-                    <p className="mt-1 text-xs text-neutral-500">
-                      {course.units_min === course.units_max
-                        ? `${course.units_min} units`
-                        : `${course.units_min}–${course.units_max} units`}
-                    </p>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </dialog>
+      <AddCourseDialog ref={addCourseDialogRef} onAdd={appendCourse} />
     </main>
   );
 }
