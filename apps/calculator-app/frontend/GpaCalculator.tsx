@@ -98,6 +98,7 @@ function searchCatalog(query: string) {
 export function GpaCalculator() {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [courses, setCourses] = useState(initialCourses);
+  const [editing, setEditing] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [entryMode, setEntryMode] = useState<"search" | "manual">("search");
   const [query, setQuery] = useState("");
@@ -208,7 +209,15 @@ export function GpaCalculator() {
     <main className="flex-1 bg-white px-6 py-6">
       <section aria-label="Course grades">
         <h1 className="text-lg font-semibold text-neutral-900">Courses</h1>
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            type="button"
+            aria-pressed={editing}
+            onClick={() => setEditing((current) => !current)}
+            className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-900 shadow-sm hover:bg-neutral-50"
+          >
+            {editing ? "Done" : "Edit"}
+          </button>
           <button
             type="button"
             onClick={openCourseModal}
@@ -234,67 +243,79 @@ export function GpaCalculator() {
             >
               <div className={`${columnClassName} min-w-0 flex-1`}>
                 <span>{course.courseName}</span>
-                <span className="inline-flex items-center gap-3">
+                {editing ? (
+                  <span className="inline-flex items-center gap-3">
+                    <select
+                      aria-label={`Season for ${course.courseName}`}
+                      value={course.season}
+                      onChange={(event) =>
+                        updateCourse(course.id, "season", event.target.value)
+                      }
+                      className={`${controlClassName} w-fit [field-sizing:content]`}
+                      style={dropdownArrow}
+                    >
+                      {seasons.map((season) => (
+                        <option key={season} value={season}>
+                          {season}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      aria-label={`Year for ${course.courseName}`}
+                      inputMode="numeric"
+                      value={course.year}
+                      onChange={(event) =>
+                        updateCourse(course.id, "year", event.target.value)
+                      }
+                      placeholder="Year"
+                      style={{ width: "4ch" }}
+                      className="bg-transparent p-0 font-medium text-inherit outline-none placeholder:text-neutral-400"
+                    />
+                  </span>
+                ) : (
+                  <span>{[course.season, course.year].filter(Boolean).join(" ") || "—"}</span>
+                )}
+                {editing ? (
                   <select
-                    aria-label={`Season for ${course.courseName}`}
-                    value={course.season}
+                    aria-label={`Letter grade for ${course.courseName}`}
+                    value={course.letterGrade}
                     onChange={(event) =>
-                      updateCourse(course.id, "season", event.target.value)
+                      updateCourse(course.id, "letterGrade", event.target.value)
                     }
-                    className={`${controlClassName} w-fit [field-sizing:content]`}
-                    style={dropdownArrow}
+                    className={controlClassName}
+                    style={{
+                      ...dropdownArrow,
+                      width: dropdownWidth(course.letterGrade || "—"),
+                    }}
                   >
-                    {seasons.map((season) => (
-                      <option key={season} value={season}>
-                        {season}
+                    <option value="">—</option>
+                    {letterGrades.map((grade) => (
+                      <option key={grade} value={grade}>
+                        {grade}
                       </option>
                     ))}
                   </select>
-                  <input
-                    aria-label={`Year for ${course.courseName}`}
-                    inputMode="numeric"
-                    value={course.year}
-                    onChange={(event) =>
-                      updateCourse(course.id, "year", event.target.value)
-                    }
-                    placeholder="Year"
-                    style={{ width: "4ch" }}
-                    className="bg-transparent p-0 font-medium text-inherit outline-none placeholder:text-neutral-400"
-                  />
-                </span>
-                <select
-                  aria-label={`Letter grade for ${course.courseName}`}
-                  value={course.letterGrade}
-                  onChange={(event) =>
-                    updateCourse(course.id, "letterGrade", event.target.value)
-                  }
-                  className={controlClassName}
-                  style={{
-                    ...dropdownArrow,
-                    width: dropdownWidth(course.letterGrade || "—"),
-                  }}
-                >
-                  <option value="">—</option>
-                  {letterGrades.map((grade) => (
-                    <option key={grade} value={grade}>
-                      {grade}
-                    </option>
-                  ))}
-                </select>
-                <span className="inline-flex items-center">
-                  <input
-                    aria-label={`Percent grade for ${course.courseName}`}
-                    inputMode="decimal"
-                    value={course.percentGrade}
-                    onChange={(event) =>
-                      updateCourse(course.id, "percentGrade", event.target.value)
-                    }
-                    placeholder="—"
-                    style={{ width: `${Math.max(course.percentGrade.length, 1)}ch` }}
-                    className="bg-transparent p-0 font-medium text-inherit outline-none placeholder:text-neutral-900"
-                  />
-                  {course.percentGrade ? "%" : null}
-                </span>
+                ) : (
+                  <span>{course.letterGrade || "—"}</span>
+                )}
+                {editing ? (
+                  <span className="inline-flex items-center">
+                    <input
+                      aria-label={`Percent grade for ${course.courseName}`}
+                      inputMode="decimal"
+                      value={course.percentGrade}
+                      onChange={(event) =>
+                        updateCourse(course.id, "percentGrade", event.target.value)
+                      }
+                      placeholder="—"
+                      style={{ width: `${Math.max(course.percentGrade.length, 1)}ch` }}
+                      className="bg-transparent p-0 font-medium text-inherit outline-none placeholder:text-neutral-900"
+                    />
+                    {course.percentGrade ? "%" : null}
+                  </span>
+                ) : (
+                  <span>{course.percentGrade ? `${course.percentGrade}%` : "—"}</span>
+                )}
               </div>
               <button
                 type="button"
