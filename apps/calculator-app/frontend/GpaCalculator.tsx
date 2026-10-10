@@ -63,6 +63,13 @@ const dropdownArrow = {
     "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' stroke='%23737373' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")",
 };
 
+const quietButtonClassName =
+  "rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-900 shadow-sm hover:bg-neutral-50";
+const activeButtonClassName =
+  "rounded-lg border border-neutral-900 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-white";
+
+type CourseField = "season" | "year" | "letterGrade" | "percentGrade";
+
 function dropdownWidth(label: string) {
   return `calc(${Math.max(label.length, 1)}ch + 0.85rem)`;
 }
@@ -83,16 +90,21 @@ export function GpaCalculator() {
   const addCourseDialogRef = useRef<AddCourseDialogHandle>(null);
   const [courses, setCourses] = useState(initialCourses);
   const [editing, setEditing] = useState(false);
+  const [whatIfEnabled, setWhatIfEnabled] = useState(false);
+  const [whatIfChanges, setWhatIfChanges] = useState<
+    Record<string, Partial<Pick<CourseGrade, CourseField>>>
+  >({});
 
   function removeCourse(id: string) {
     setCourses((current) => current.filter((course) => course.id !== id));
+    setWhatIfChanges((current) => {
+      const next = { ...current };
+      delete next[id];
+      return next;
+    });
   }
 
-  function updateCourse(
-    id: string,
-    field: "season" | "year" | "letterGrade" | "percentGrade",
-    value: string,
-  ) {
+  function updateCourse(id: string, field: CourseField, value: string) {
     if (field === "percentGrade" && !isPercentDraft(value)) {
       return;
     }
@@ -101,11 +113,37 @@ export function GpaCalculator() {
       return;
     }
 
+    if (whatIfEnabled) {
+      setWhatIfChanges((current) => ({
+        ...current,
+        [id]: { ...current[id], [field]: value },
+      }));
+      return;
+    }
+
     setCourses((current) =>
       current.map((course) =>
         course.id === id ? { ...course, [field]: value } : course,
       ),
     );
+  }
+
+  function toggleEditing() {
+    if (whatIfEnabled) {
+      setWhatIfChanges({});
+      setWhatIfEnabled(false);
+    }
+    setEditing((current) => !current);
+  }
+
+  function toggleWhatIf() {
+    setEditing(false);
+    if (whatIfEnabled) {
+      setWhatIfChanges({});
+      setWhatIfEnabled(false);
+      return;
+    }
+    setWhatIfEnabled(true);
   }
 
   function appendCourse(idPrefix: string, courseName: string) {
@@ -126,22 +164,35 @@ export function GpaCalculator() {
     <main className="flex-1 bg-white px-6 py-6">
       <section aria-label="Course grades">
         <h1 className="text-lg font-semibold text-neutral-900">Courses</h1>
-        <div className="mt-4 flex justify-end gap-2">
+        <div className="mt-4 flex items-center justify-between gap-2">
+          <p className="text-sm font-medium text-neutral-900">
+            {whatIfEnabled ? "What if mode" : null}
+          </p>
+          <div className="flex gap-2">
+          <button
+            type="button"
+            aria-pressed={whatIfEnabled}
+            onClick={toggleWhatIf}
+            className={whatIfEnabled ? activeButtonClassName : quietButtonClassName}
+          >
+            What if
+          </button>
           <button
             type="button"
             aria-pressed={editing}
-            onClick={() => setEditing((current) => !current)}
-            className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-900 shadow-sm hover:bg-neutral-50"
+            onClick={toggleEditing}
+            className={quietButtonClassName}
           >
             {editing ? "Done" : "Edit"}
           </button>
           <button
             type="button"
             onClick={() => addCourseDialogRef.current?.open()}
-            className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-900 shadow-sm hover:bg-neutral-50"
+            className={quietButtonClassName}
           >
             Add
           </button>
+          </div>
         </div>
         <div className="mt-4 flex items-center gap-2 px-[13px] text-xs text-neutral-500 sm:px-[17px] sm:text-sm">
           <div className={`${columnClassName} min-w-0 flex-1`}>
@@ -153,18 +204,24 @@ export function GpaCalculator() {
           <span className="size-6 shrink-0" aria-hidden="true" />
         </div>
         <ul className="mt-2 flex flex-col gap-3">
-          {courses.map((course) => (
+          {courses.map((course) => {
+            const row = whatIfEnabled
+              ? { ...course, ...whatIfChanges[course.id] }
+              : course;
+            const adjusting = editing || whatIfEnabled;
+
+            return (
             <li
               key={course.id}
               className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm font-medium text-neutral-900 sm:p-4 sm:text-base"
             >
               <div className={`${columnClassName} min-w-0 flex-1`}>
                 <span>{course.courseName}</span>
-                {editing ? (
+                {adjusting ? (
                   <span className="inline-flex items-center gap-3">
                     <select
                       aria-label={`Season for ${course.courseName}`}
-                      value={course.season}
+                      value={row.season}
                       onChange={(event) =>
                         updateCourse(course.id, "season", event.target.value)
                       }
@@ -180,7 +237,7 @@ export function GpaCalculator() {
                     <input
                       aria-label={`Year for ${course.courseName}`}
                       inputMode="numeric"
-                      value={course.year}
+                      value={row.year}
                       onChange={(event) =>
                         updateCourse(course.id, "year", event.target.value)
                       }
@@ -190,19 +247,19 @@ export function GpaCalculator() {
                     />
                   </span>
                 ) : (
-                  <span>{[course.season, course.year].filter(Boolean).join(" ") || "—"}</span>
+                  <span>{[row.season, row.year].filter(Boolean).join(" ") || "—"}</span>
                 )}
-                {editing ? (
+                {adjusting ? (
                   <select
                     aria-label={`Letter grade for ${course.courseName}`}
-                    value={course.letterGrade}
+                    value={row.letterGrade}
                     onChange={(event) =>
                       updateCourse(course.id, "letterGrade", event.target.value)
                     }
                     className={controlClassName}
                     style={{
                       ...dropdownArrow,
-                      width: dropdownWidth(course.letterGrade || "—"),
+                      width: dropdownWidth(row.letterGrade || "—"),
                     }}
                   >
                     <option value="">—</option>
@@ -213,25 +270,25 @@ export function GpaCalculator() {
                     ))}
                   </select>
                 ) : (
-                  <span>{course.letterGrade || "—"}</span>
+                  <span>{row.letterGrade || "—"}</span>
                 )}
-                {editing ? (
+                {adjusting ? (
                   <span className="inline-flex items-center">
                     <input
                       aria-label={`Percent grade for ${course.courseName}`}
                       inputMode="decimal"
-                      value={course.percentGrade}
+                      value={row.percentGrade}
                       onChange={(event) =>
                         updateCourse(course.id, "percentGrade", event.target.value)
                       }
                       placeholder="—"
-                      style={{ width: `${Math.max(course.percentGrade.length, 1)}ch` }}
+                      style={{ width: `${Math.max(row.percentGrade.length, 1)}ch` }}
                       className="bg-transparent p-0 font-medium text-inherit outline-none placeholder:text-neutral-900"
                     />
-                    {course.percentGrade ? "%" : null}
+                    {row.percentGrade ? "%" : null}
                   </span>
                 ) : (
-                  <span>{course.percentGrade ? `${course.percentGrade}%` : "—"}</span>
+                  <span>{row.percentGrade ? `${row.percentGrade}%` : "—"}</span>
                 )}
               </div>
               <button
@@ -243,7 +300,8 @@ export function GpaCalculator() {
                 ×
               </button>
             </li>
-          ))}
+            );
+          })}
         </ul>
       </section>
       <AddCourseDialog ref={addCourseDialogRef} onAdd={appendCourse} />
