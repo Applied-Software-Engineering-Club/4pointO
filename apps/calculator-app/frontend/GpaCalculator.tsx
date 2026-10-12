@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { AddCourseDialog, type AddCourseDialogHandle } from "./AddCourseDialog";
+import { GpaResults } from "./GpaResults";
 
 type CourseGrade = {
   id: string;
@@ -304,6 +305,14 @@ export function GpaCalculator() {
           })}
         </ul>
       </section>
+      {/* TODO: Replace placeholder values with the GPA engine results. */}
+      <GpaResults
+        semesterLabel="Fall 2026"
+        semesterGpa={3.12}
+        semesterUnits={10}
+        cgpa={3.45}
+        totalUnits={24}
+      />
       <AddCourseDialog ref={addCourseDialogRef} onAdd={appendCourse} />
     </main>
   );
