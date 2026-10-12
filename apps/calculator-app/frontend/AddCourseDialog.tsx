@@ -2,6 +2,7 @@
 
 import { useEffect, useImperativeHandle, useRef, useState, type FormEvent, type MouseEvent, type Ref } from "react";
 import catalog from "@/utils/data/course-sample.json";
+import { CourseDetails } from "./CourseDetails";
 
 type CatalogCourse = (typeof catalog.courses)[number];
 
@@ -37,6 +38,8 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
   const [loading, setLoading] = useState(false);
   const [manualName, setManualName] = useState("");
   const [manualError, setManualError] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
 
   useImperativeHandle(ref, () => ({
     open() {
@@ -70,6 +73,7 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
     setQuery("");
     setManualName("");
     setManualError(null);
+    setExpandedId(null);
   }
 
   function addCourse(idPrefix: string, courseName: string) {
@@ -225,6 +229,31 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
                           : `${course.units_min}–${course.units_max} units`}
                       </p>
                     </button>
+                    <button
+                      type="button"
+                      aria-expanded={expandedId === course.catalog_course_id}
+                      aria-controls={`course-details-${course.catalog_course_id}`}
+                      onClick={() =>
+                        setExpandedId((current) =>
+                          current === course.catalog_course_id
+                            ? null
+                            : course.catalog_course_id,
+                        )
+                      }
+                      className="mt-2 text-xs font-medium text-neutral-600 underline hover:text-neutral-900"
+                    >
+                      {expandedId === course.catalog_course_id
+                        ? "Hide details"
+                        : "Show details"}
+                    </button>
+                    {expandedId === course.catalog_course_id ? (
+                      <div
+                        id={`course-details-${course.catalog_course_id}`}
+                        className="mt-2"
+                      >
+                        <CourseDetails course={course} />
+                      </div>
+                    ) : null}
                   </li>
                 ))}
               </ul>
