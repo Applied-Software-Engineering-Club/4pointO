@@ -214,12 +214,13 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
               </div>
             ) : (
               <ul className="flex flex-col gap-3">
-                {results.map((course) => (
-                  <li key={course.catalog_course_id}>
-                    <button
-                      type="button"
-                      onClick={() => addCourse(course.catalog_course_id, course.code)}
-                      className="w-full rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-left hover:bg-neutral-100"
+                {results.map((course) => {
+                  const detailsOpen = expandedId === course.catalog_course_id;
+
+                  return (
+                    <li
+                      key={course.catalog_course_id}
+                      className="rounded-xl border border-neutral-200 bg-neutral-50 p-3"
                     >
                       <p className="text-sm font-medium">{course.code}</p>
                       <p className="mt-1 text-sm text-neutral-600">{course.title}</p>
@@ -228,34 +229,41 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
                           ? `${course.units_min} units`
                           : `${course.units_min}–${course.units_max} units`}
                       </p>
-                    </button>
-                    <button
-                      type="button"
-                      aria-expanded={expandedId === course.catalog_course_id}
-                      aria-controls={`course-details-${course.catalog_course_id}`}
-                      onClick={() =>
-                        setExpandedId((current) =>
-                          current === course.catalog_course_id
-                            ? null
-                            : course.catalog_course_id,
-                        )
-                      }
-                      className="mt-2 text-xs font-medium text-neutral-600 underline hover:text-neutral-900"
-                    >
-                      {expandedId === course.catalog_course_id
-                        ? "Hide details"
-                        : "Show details"}
-                    </button>
-                    {expandedId === course.catalog_course_id ? (
-                      <div
-                        id={`course-details-${course.catalog_course_id}`}
-                        className="mt-2"
-                      >
-                        <CourseDetails course={course} />
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          aria-expanded={detailsOpen}
+                          aria-controls={`course-details-${course.catalog_course_id}`}
+                          onClick={() =>
+                            setExpandedId((current) =>
+                              current === course.catalog_course_id
+                                ? null
+                                : course.catalog_course_id,
+                            )
+                          }
+                          className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-900 shadow-sm hover:bg-neutral-50"
+                        >
+                          {detailsOpen ? "Hide details" : "View details"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => addCourse(course.catalog_course_id, course.code)}
+                          className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-900 shadow-sm hover:bg-neutral-50"
+                        >
+                          Add course
+                        </button>
                       </div>
-                    ) : null}
-                  </li>
-                ))}
+                      {detailsOpen ? (
+                        <div
+                          id={`course-details-${course.catalog_course_id}`}
+                          className="mt-3"
+                        >
+                          <CourseDetails course={course} />
+                        </div>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
