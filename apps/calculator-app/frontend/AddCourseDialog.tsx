@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useImperativeHandle, useRef, useState, type FormEvent, type MouseEvent, type Ref } from "react";
-import catalog from "@/utils/data/course-sample.json";
-
-type CatalogCourse = (typeof catalog.courses)[number];
+import { searchCourses, type CatalogCourse } from "../backend/course-service";
 
 export type AddCourseDialogHandle = {
   open: () => void;
@@ -13,20 +11,6 @@ type AddCourseDialogProps = {
   ref?: Ref<AddCourseDialogHandle>;
   onAdd: (idPrefix: string, courseName: string) => void;
 };
-
-function searchCatalog(query: string) {
-  const normalized = query.trim().toLowerCase();
-  if (!normalized) {
-    return catalog.courses;
-  }
-
-  return catalog.courses.filter((course) => {
-    return (
-      course.code.toLowerCase().includes(normalized) ||
-      course.title.toLowerCase().includes(normalized)
-    );
-  });
-}
 
 export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -53,7 +37,7 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
 
     setLoading(true);
     const timeout = window.setTimeout(() => {
-      setResults(searchCatalog(query));
+      setResults(searchCourses(query));
       setLoading(false);
     }, 300);
 
