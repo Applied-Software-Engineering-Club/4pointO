@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useImperativeHandle, useRef, useState, type FormEvent, type MouseEvent, type Ref } from "react";
+import { useImperativeHandle, useRef, useState, type FormEvent, type MouseEvent, type Ref } from "react";
 import catalog from "@/utils/data/course-sample.json";
 import { CourseDetails } from "./CourseDetails";
 
@@ -18,24 +18,25 @@ type AddCourseDialogProps = {
 function searchCatalog(query: string) {
   const normalized = query.trim().toLowerCase();
   if (!normalized) {
-    return catalog.courses;
+    return [];
   }
 
-  return catalog.courses.filter((course) => {
-    return (
-      course.code.toLowerCase().includes(normalized) ||
-      course.title.toLowerCase().includes(normalized)
-    );
-  });
+  return catalog.courses
+    .filter((course) => {
+      return [course.code, course.title, course.section].some((value) =>
+        value?.toLowerCase().includes(normalized),
+      );
+    })
+    .slice(0, 20);
 }
 
 export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [modalOpen, setModalOpen] = useState(false);
   const [entryMode, setEntryMode] = useState<"search" | "manual">("search");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<CatalogCourse[]>([]);
   const [loading, setLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const [manualName, setManualName] = useState("");
   const [manualError, setManualError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -43,34 +44,20 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
 
   useImperativeHandle(ref, () => ({
     open() {
-      setLoading(true);
-      setModalOpen(true);
       dialogRef.current?.showModal();
     },
   }));
-
-  useEffect(() => {
-    if (!modalOpen || entryMode !== "search") {
-      return;
-    }
-
-    setLoading(true);
-    const timeout = window.setTimeout(() => {
-      setResults(searchCatalog(query));
-      setLoading(false);
-    }, 300);
-
-    return () => window.clearTimeout(timeout);
-  }, [modalOpen, query, entryMode]);
 
   function closeCourseModal() {
     dialogRef.current?.close();
   }
 
   function resetCourseModal() {
-    setModalOpen(false);
     setEntryMode("search");
     setQuery("");
+    setResults([]);
+    setHasSearched(false);
+    setLoading(false);
     setManualName("");
     setManualError(null);
     setExpandedId(null);
@@ -79,6 +66,15 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
   function addCourse(idPrefix: string, courseName: string) {
     onAdd(idPrefix, courseName);
     closeCourseModal();
+  }
+
+  function runSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setHasSearched(true);
+    setExpandedId(null);
+    setLoading(true);
+    setResults(searchCatalog(query));
+    setLoading(false);
   }
 
   function openManualEntry(prefill = "") {
@@ -155,6 +151,8 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
         <form className="mt-4" onSubmit={addManualCourse} noValidate>
           <label className="block text-sm font-medium text-neutral-900" htmlFor="manual-course-name">
             Course
+          </label>
+          <div className="mt-1 flex items-center rounded-lg border border-neutral-200 pr-1">
             <input
               id="manual-course-name"
               value={manualName}
@@ -166,40 +164,47 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
               aria-describedby={manualError ? "manual-course-error" : undefined}
               placeholder="Course name"
               autoFocus
-              className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm font-normal text-neutral-900"
+              className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm font-normal text-neutral-900 outline-none"
             />
-          </label>
+            <button
+              type="submit"
+              className="shrink-0 rounded-md px-2.5 py-1 text-xs font-medium text-neutral-900 hover:bg-neutral-50"
+            >
+              Add course
+            </button>
+          </div>
           {manualError ? (
             <p id="manual-course-error" className="mt-2 text-sm text-red-600">
               {manualError}
             </p>
           ) : null}
-          <div className="mt-4 flex justify-end">
-            <button
-              type="submit"
-              className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-900 shadow-sm hover:bg-neutral-50"
-            >
-              Add course
-            </button>
-          </div>
         </form>
       ) : (
         <>
-          <label className="mt-4 block text-sm font-medium text-neutral-900">
-            Search
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => {
-                setLoading(true);
-                setQuery(event.target.value);
-              }}
-              placeholder="Search courses"
-              className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm font-normal text-neutral-900"
-            />
-          </label>
+          <form className="mt-4" onSubmit={runSearch}>
+            <label className="block text-sm font-medium text-neutral-900" htmlFor="course-search">
+              Search
+            </label>
+            <div className="mt-1 flex items-center rounded-lg border border-neutral-200 pr-1">
+              <input
+                id="course-search"
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Enter course code, title, or department."
+                autoFocus
+                className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm font-normal text-neutral-900 outline-none"
+              />
+              <button
+                type="submit"
+                className="shrink-0 rounded-md px-2.5 py-1 text-xs font-medium text-neutral-900 hover:bg-neutral-50"
+              >
+                Search
+              </button>
+            </div>
+          </form>
           <div className="mt-4" aria-live="polite">
-            {!modalOpen ? null : loading ? (
+            {!hasSearched ? null : loading ? (
               <p className="text-sm text-neutral-500">Loading</p>
             ) : results.length === 0 ? (
               <div className="flex flex-col items-start gap-3">
