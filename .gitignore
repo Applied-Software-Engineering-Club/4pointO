@@ -45,3 +45,6 @@ next-env.d.ts
 __pycache__/
 *.py[cod]
 .venv/
+
+# full catalog snapshot; loaded into Supabase a few times a year
+utils/data/courses.json
