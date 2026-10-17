@@ -1,17 +1,18 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
+import {
+  loadRecords,
+  saveRecords,
+  type CourseGrade,
+} from "../backend/records-storage";
 import { AddCourseDialog, type AddCourseDialogHandle } from "./AddCourseDialog";
 import { GpaResults } from "./GpaResults";
 
-type CourseGrade = {
-  id: string;
-  courseName: string;
-  season: string;
-  year: string;
-  letterGrade: string;
-  percentGrade: string;
-};
+type SaveStatus =
+  | { state: "idle" }
+  | { state: "saved" }
+  | { state: "error"; message: string };
 
 const letterGrades = [
   "A+",
@@ -87,17 +88,63 @@ function isPercentDraft(value: string) {
   return /^\d{1,3}(\.\d{0,2})?$/.test(value) && Number(value) <= 100;
 }
 
+const noopSubscribe = () => () => {};
+
+// Browser storage only exists on the client, so render a placeholder during
+// SSR and load saved records once the component is running in the browser.
 export function GpaCalculator() {
+  const isClient = useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
+
+  if (!isClient) {
+    return (
+      <main className="flex-1 bg-white px-6 py-6">
+        <p role="status" className="text-sm text-neutral-500">
+          Loading saved grades…
+        </p>
+      </main>
+    );
+  }
+
+  return <GpaCalculatorView />;
+}
+
+function loadInitialState(): { courses: CourseGrade[]; status: SaveStatus } {
+  const result = loadRecords();
+  if (!result.ok) {
+    return {
+      courses: initialCourses,
+      status: { state: "error", message: result.error },
+    };
+  }
+  return { courses: result.records ?? initialCourses, status: { state: "idle" } };
+}
+
+function GpaCalculatorView() {
   const addCourseDialogRef = useRef<AddCourseDialogHandle>(null);
-  const [courses, setCourses] = useState(initialCourses);
+  const [initialState] = useState(loadInitialState);
+  const [courses, setCourses] = useState(initialState.courses);
+  const [saveStatus, setSaveStatus] = useState(initialState.status);
   const [editing, setEditing] = useState(false);
   const [whatIfEnabled, setWhatIfEnabled] = useState(false);
   const [whatIfChanges, setWhatIfChanges] = useState<
     Record<string, Partial<Pick<CourseGrade, CourseField>>>
   >({});
 
+  // Update saved records and persist them. What-if changes never go through here.
+  function commitCourses(next: CourseGrade[]) {
+    setCourses(next);
+    const result = saveRecords(next);
+    setSaveStatus(
+      result.ok ? { state: "saved" } : { state: "error", message: result.error },
+    );
+  }
+
   function removeCourse(id: string) {
-    setCourses((current) => current.filter((course) => course.id !== id));
+    commitCourses(courses.filter((course) => course.id !== id));
     setWhatIfChanges((current) => {
       const next = { ...current };
       delete next[id];
@@ -122,8 +169,8 @@ export function GpaCalculator() {
       return;
     }
 
-    setCourses((current) =>
-      current.map((course) =>
+    commitCourses(
+      courses.map((course) =>
         course.id === id ? { ...course, [field]: value } : course,
       ),
     );
@@ -148,8 +195,8 @@ export function GpaCalculator() {
   }
 
   function appendCourse(idPrefix: string, courseName: string) {
-    setCourses((current) => [
-      ...current,
+    commitCourses([
+      ...courses,
       {
         id: `${idPrefix}-${crypto.randomUUID()}`,
         courseName,
@@ -166,9 +213,26 @@ export function GpaCalculator() {
       <section aria-label="Course grades">
         <h1 className="text-lg font-semibold text-neutral-900">Courses</h1>
         <div className="mt-4 flex items-center justify-between gap-2">
-          <p className="text-sm font-medium text-neutral-900">
-            {whatIfEnabled ? "What if mode" : null}
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="text-sm font-medium text-neutral-900">
+              {whatIfEnabled ? "What if mode" : null}
+            </p>
+            <p
+              role="status"
+              aria-live="polite"
+              className={
+                saveStatus.state === "error"
+                  ? "text-xs text-red-600"
+                  : "text-xs text-neutral-500"
+              }
+            >
+              {saveStatus.state === "saved"
+                ? "Saved"
+                : saveStatus.state === "error"
+                  ? `Not saved: ${saveStatus.message}`
+                  : null}
+            </p>
+          </div>
           <div className="flex gap-2">
           <button
             type="button"
