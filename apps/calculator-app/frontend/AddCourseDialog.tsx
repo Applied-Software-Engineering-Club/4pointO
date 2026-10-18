@@ -12,7 +12,7 @@ export type AddCourseDialogHandle = {
 
 type AddCourseDialogProps = {
   ref?: Ref<AddCourseDialogHandle>;
-  onAdd: (idPrefix: string, courseName: string) => void;
+  onAdd: (idPrefix: string, courseName: string, credits?: string) => void;
 };
 
 function searchCatalog(query: string) {
@@ -63,8 +63,12 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
     setExpandedId(null);
   }
 
-  function addCourse(idPrefix: string, courseName: string) {
-    onAdd(idPrefix, courseName);
+  function addCourse(
+    idPrefix: string,
+    courseName: string,
+    credits?: string,
+  ) {
+    onAdd(idPrefix, courseName, credits);
     closeCourseModal();
   }
 
@@ -252,7 +256,13 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
                         </button>
                         <button
                           type="button"
-                          onClick={() => addCourse(course.catalog_course_id, course.code)}
+                          onClick={() =>
+                            addCourse(
+                              course.catalog_course_id,
+                              course.code,
+                              String(course.units_min),
+                            )
+                          }
                           className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-900 shadow-sm hover:bg-neutral-50"
                         >
                           Add course
