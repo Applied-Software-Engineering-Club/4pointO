@@ -11,6 +11,7 @@ type CourseGrade = {
   year: string;
   letterGrade: string;
   percentGrade: string;
+  credits: string;
 };
 
 const letterGrades = [
@@ -34,6 +35,7 @@ const letterGrades = [
   "I",
 ];
 
+const creditOptions = ["1", "2", "3", "4"];
 const seasons = ["Fall", "Spring", "Summer"];
 const defaultYear = String(new Date().getFullYear());
 
@@ -45,6 +47,7 @@ const initialCourses: CourseGrade[] = [
     year: "2026",
     letterGrade: "B+",
     percentGrade: "89.51",
+    credits: "3",
   },
   {
     id: "cs-160",
@@ -53,10 +56,11 @@ const initialCourses: CourseGrade[] = [
     year: "2026",
     letterGrade: "B+",
     percentGrade: "89.51",
+    credits: "3",
   },
 ];
 
-const columnClassName = "grid grid-cols-4 gap-2 whitespace-nowrap sm:gap-8";
+const columnClassName = "grid grid-cols-5 gap-2 whitespace-nowrap sm:gap-8";
 const controlClassName =
   "cursor-pointer appearance-none justify-self-start border-0 bg-transparent bg-[length:0.65rem] bg-[position:right_center] bg-no-repeat p-0 pr-[0.85rem] font-medium text-inherit outline-none";
 const dropdownArrow = {
@@ -129,6 +133,18 @@ export function GpaCalculator() {
     );
   }
 
+  function updateCredits(id: string, value: string) {
+    if (!editing || whatIfEnabled || !creditOptions.includes(value)) {
+      return;
+    }
+
+    setCourses((current) =>
+      current.map((course) =>
+        course.id === id ? { ...course, credits: value } : course,
+      ),
+    );
+  }
+
   function toggleEditing() {
     if (whatIfEnabled) {
       setWhatIfChanges({});
@@ -157,6 +173,7 @@ export function GpaCalculator() {
         year: defaultYear,
         letterGrade: "",
         percentGrade: "",
+        credits: "",
       },
     ]);
   }
@@ -201,6 +218,7 @@ export function GpaCalculator() {
             <span>Semester</span>
             <span>Letter grade</span>
             <span>Percent grade</span>
+            <span>Credits</span>
           </div>
           <span className="size-6 shrink-0" aria-hidden="true" />
         </div>
@@ -290,6 +308,29 @@ export function GpaCalculator() {
                   </span>
                 ) : (
                   <span>{row.percentGrade ? `${row.percentGrade}%` : "—"}</span>
+                )}
+                {editing && !whatIfEnabled ? (
+                  <select
+                    aria-label={`Credits for ${course.courseName}`}
+                    value={course.credits}
+                    onChange={(event) =>
+                      updateCredits(course.id, event.target.value)
+                    }
+                    className={controlClassName}
+                    style={{
+                      ...dropdownArrow,
+                      width: dropdownWidth(course.credits || "—"),
+                    }}
+                  >
+                    <option value="">—</option>
+                    {creditOptions.map((credit) => (
+                      <option key={credit} value={credit}>
+                        {credit}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span>{course.credits || "—"}</span>
                 )}
               </div>
               <button
