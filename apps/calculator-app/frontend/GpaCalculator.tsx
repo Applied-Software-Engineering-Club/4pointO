@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AddCourseDialog, type AddCourseDialogHandle } from "./AddCourseDialog";
 import { calculateCgpa, calculateSemesterGpa, isSupportedGrade, LETTER_GRADES, type GradeRecord, type Semester } from "../backend/gpa-service";
+import { createSemester, removeSemester as removeSemesterFromList } from "../backend/semester-service";
 import { loadSemesters, saveSemesters } from "./storage";
 
 const seasons = ["Fall", "Spring", "Summer"];
@@ -31,15 +32,13 @@ export function GpaCalculator() {
   const cgpaResult = calculateCgpa(whatIfEnabled ? semesters.map((semester) => ({ ...semester, records: semester.records.map((record) => ({ ...record, ...whatIfChanges[record.id] })) })) : semesters);
 
   function updateSemester(field: "season" | "year", value: string) { setSemesters((current) => current.map((semester) => semester.id === activeId ? { ...semester, [field]: value, records: semester.records.map((record) => ({ ...record, [field]: value })) } : semester)); }
-  function addSemester() { const semester: Semester = { id: crypto.randomUUID(), season: "Fall", year: defaultYear, records: [] }; setSemesters((current) => [...current, semester]); setActiveId(semester.id); setEditing(true); }
+  function addSemester() { const semester = createSemester("Fall", defaultYear); setSemesters((current) => [...current, semester]); setActiveId(semester.id); setEditing(true); }
   function removeSemester() {
-    if (semesters.length <= 1) return;
-    const removedIndex = semesters.findIndex((semester) => semester.id === activeId);
     const removed = semesters.find((semester) => semester.id === activeId);
     const removedRecordIds = new Set(removed?.records.map((record) => record.id));
-    const next = semesters.filter((semester) => semester.id !== activeId);
-    setSemesters(next);
-    setActiveId(next[Math.min(Math.max(removedIndex - 1, 0), next.length - 1)].id);
+    const result = removeSemesterFromList(semesters, activeId);
+    setSemesters(result.semesters);
+    setActiveId(result.activeId);
     setWhatIfChanges((current) => Object.fromEntries(Object.entries(current).filter(([id]) => !removedRecordIds.has(id))));
   }
   function updateRecord(id: string, field: keyof GradeRecord, value: string | number) { if (whatIfEnabled) { setWhatIfChanges((current) => ({ ...current, [id]: { ...current[id], [field]: value } })); return; } setSemesters((current) => current.map((semester) => semester.id === activeId ? { ...semester, records: semester.records.map((record) => record.id === id ? { ...record, [field]: value } : record) } : semester)); }
