@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { AddCourseDialog, type AddCourseDialogHandle } from "./AddCourseDialog";
 import { calculateCgpa, calculateSemesterGpa, isSupportedGrade, LETTER_GRADES, type GradeRecord, type Semester } from "../backend/gpa-service";
 import { createSemester, removeSemester as removeSemesterFromList } from "../backend/semester-service";
+import { applyWhatIf, applyWhatIfToSemesters } from "../backend/what-if-service";
 import { loadSemesters, saveSemesters } from "./storage";
 
 const seasons = ["Fall", "Spring", "Summer"];
@@ -27,9 +28,9 @@ export function GpaCalculator() {
 
   useEffect(() => { const saved = loadSemesters(); if (saved?.length) { setSemesters(saved); setActiveId(saved[0].id); } }, []);
   const active = semesters.find((semester) => semester.id === activeId) ?? semesters[0];
-  const scenarioRecords = active.records.map((record) => ({ ...record, ...whatIfChanges[record.id] }));
+  const scenarioRecords = active.records.map((record) => applyWhatIf(record, whatIfChanges));
   const semesterResult = calculateSemesterGpa(whatIfEnabled ? scenarioRecords : active.records);
-  const cgpaResult = calculateCgpa(whatIfEnabled ? semesters.map((semester) => ({ ...semester, records: semester.records.map((record) => ({ ...record, ...whatIfChanges[record.id] })) })) : semesters);
+  const cgpaResult = calculateCgpa(whatIfEnabled ? applyWhatIfToSemesters(semesters, whatIfChanges) : semesters);
 
   function updateSemester(field: "season" | "year", value: string) { setSemesters((current) => current.map((semester) => semester.id === activeId ? { ...semester, [field]: value, records: semester.records.map((record) => ({ ...record, [field]: value })) } : semester)); }
   function addSemester() { const semester = createSemester("Fall", defaultYear); setSemesters((current) => [...current, semester]); setActiveId(semester.id); setEditing(true); }
