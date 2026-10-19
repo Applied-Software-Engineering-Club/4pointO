@@ -1,7 +1,13 @@
 "use client";
 
 import { useRef, useState } from "react";
+import {
+  calculateCgpa,
+  calculateSemesterGpa,
+  type GpaCourse,
+} from "@/apps/calculator-app/backend/gpa";
 import { AddCourseDialog, type AddCourseDialogHandle } from "./AddCourseDialog";
+import { GpaResults } from "./GpaResults";
 
 type CourseGrade = {
   id: string;
@@ -10,7 +16,24 @@ type CourseGrade = {
   year: string;
   letterGrade: string;
   percentGrade: string;
+  credits: string;
 };
+
+function toGpaCourse(course: CourseGrade): GpaCourse {
+  return {
+    id: course.id,
+    courseName: course.courseName,
+    units: Number(course.credits),
+    season: course.season,
+    year: course.year,
+    letterGrade: course.letterGrade,
+    percentGrade: course.percentGrade,
+  };
+}
+
+function semesterIdFor(course: Pick<CourseGrade, "season" | "year">) {
+  return `${course.season} ${course.year}`;
+}
 
 const letterGrades = [
   "A+",
@@ -33,6 +56,7 @@ const letterGrades = [
   "I",
 ];
 
+const creditOptions = ["1", "2", "3", "4"];
 const seasons = ["Fall", "Spring", "Summer"];
 const defaultYear = String(new Date().getFullYear());
 
@@ -44,6 +68,7 @@ const initialCourses: CourseGrade[] = [
     year: "2026",
     letterGrade: "B+",
     percentGrade: "89.51",
+    credits: "3",
   },
   {
     id: "cs-160",
@@ -52,10 +77,11 @@ const initialCourses: CourseGrade[] = [
     year: "2026",
     letterGrade: "B+",
     percentGrade: "89.51",
+    credits: "3",
   },
 ];
 
-const columnClassName = "grid grid-cols-4 gap-2 whitespace-nowrap sm:gap-8";
+const columnClassName = "grid grid-cols-5 gap-2 whitespace-nowrap sm:gap-8";
 const controlClassName =
   "cursor-pointer appearance-none justify-self-start border-0 bg-transparent bg-[length:0.65rem] bg-[position:right_center] bg-no-repeat p-0 pr-[0.85rem] font-medium text-inherit outline-none";
 const dropdownArrow = {
@@ -128,6 +154,18 @@ export function GpaCalculator() {
     );
   }
 
+  function updateCredits(id: string, value: string) {
+    if (!editing || whatIfEnabled || !creditOptions.includes(value)) {
+      return;
+    }
+
+    setCourses((current) =>
+      current.map((course) =>
+        course.id === id ? { ...course, credits: value } : course,
+      ),
+    );
+  }
+
   function toggleEditing() {
     if (whatIfEnabled) {
       setWhatIfChanges({});
@@ -146,7 +184,11 @@ export function GpaCalculator() {
     setWhatIfEnabled(true);
   }
 
-  function appendCourse(idPrefix: string, courseName: string) {
+  function appendCourse(
+    idPrefix: string,
+    courseName: string,
+    credits?: string,
+  ) {
     setCourses((current) => [
       ...current,
       {
@@ -156,9 +198,20 @@ export function GpaCalculator() {
         year: defaultYear,
         letterGrade: "",
         percentGrade: "",
+        credits: credits ?? "",
       },
     ]);
   }
+
+  const displayCourses = courses.map((course) =>
+    whatIfEnabled ? { ...course, ...whatIfChanges[course.id] } : course,
+  );
+  const semesterId = displayCourses[0]
+    ? semesterIdFor(displayCourses[0])
+    : `Fall ${defaultYear}`;
+  const gpaCourses = displayCourses.map(toGpaCourse);
+  const semesterResult = calculateSemesterGpa(gpaCourses, semesterId);
+  const cgpaResult = calculateCgpa(gpaCourses);
 
   return (
     <main className="flex-1 bg-white px-6 py-6">
@@ -200,6 +253,7 @@ export function GpaCalculator() {
             <span>Semester</span>
             <span>Letter grade</span>
             <span>Percent grade</span>
+            <span>Credits</span>
           </div>
           <span className="size-6 shrink-0" aria-hidden="true" />
         </div>
@@ -290,6 +344,29 @@ export function GpaCalculator() {
                 ) : (
                   <span>{row.percentGrade ? `${row.percentGrade}%` : "—"}</span>
                 )}
+                {editing && !whatIfEnabled ? (
+                  <select
+                    aria-label={`Credits for ${course.courseName}`}
+                    value={course.credits}
+                    onChange={(event) =>
+                      updateCredits(course.id, event.target.value)
+                    }
+                    className={controlClassName}
+                    style={{
+                      ...dropdownArrow,
+                      width: dropdownWidth(course.credits || "—"),
+                    }}
+                  >
+                    <option value="">—</option>
+                    {creditOptions.map((credit) => (
+                      <option key={credit} value={credit}>
+                        {credit}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span>{course.credits || "—"}</span>
+                )}
               </div>
               <button
                 type="button"
@@ -304,6 +381,13 @@ export function GpaCalculator() {
           })}
         </ul>
       </section>
+      <GpaResults
+        semesterLabel={semesterId}
+        semesterGpa={semesterResult.gpa}
+        semesterUnits={semesterResult.units}
+        cgpa={cgpaResult.gpa}
+        totalUnits={cgpaResult.units}
+      />
       <AddCourseDialog ref={addCourseDialogRef} onAdd={appendCourse} />
     </main>
   );
