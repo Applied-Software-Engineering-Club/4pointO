@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useImperativeHandle, useRef, useState, type FormEvent, type MouseEvent, type Ref } from "react";
+import { useImperativeHandle, useRef, useState, type FormEvent, type MouseEvent, type Ref } from "react";
 import { searchCourses, type CatalogCourse } from "../backend/course-service";
 
 export type AddCourseDialogHandle = {
@@ -19,30 +19,16 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<CatalogCourse[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [manualName, setManualName] = useState("");
   const [manualError, setManualError] = useState<string | null>(null);
 
   useImperativeHandle(ref, () => ({
     open() {
-      setLoading(true);
       setModalOpen(true);
       dialogRef.current?.showModal();
     },
   }));
-
-  useEffect(() => {
-    if (!modalOpen || entryMode !== "search") {
-      return;
-    }
-
-    setLoading(true);
-    const timeout = window.setTimeout(() => {
-      setResults(searchCourses(query));
-      setLoading(false);
-    }, 300);
-
-    return () => window.clearTimeout(timeout);
-  }, [modalOpen, query, entryMode]);
 
   function closeCourseModal() {
     dialogRef.current?.close();
@@ -52,6 +38,8 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
     setModalOpen(false);
     setEntryMode("search");
     setQuery("");
+    setResults([]);
+    setSearchError(null);
     setManualName("");
     setManualError(null);
   }
@@ -76,6 +64,20 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
     }
 
     addCourse("manual", courseName);
+  }
+
+  async function runSearch(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
+    setLoading(true);
+    setSearchError(null);
+    try {
+      setResults(await searchCourses(query));
+    } catch (error) {
+      setResults([]);
+      setSearchError(error instanceof Error ? error.message : "Unable to search courses.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   function closeOnBackdropClick(event: MouseEvent<HTMLDialogElement>) {
@@ -165,25 +167,36 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
         </form>
       ) : (
         <>
-          <label className="mt-4 block text-sm font-medium text-neutral-900">
-            Search
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => {
-                setLoading(true);
-                setQuery(event.target.value);
-              }}
-              placeholder="Search courses"
-              className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm font-normal text-neutral-900"
-            />
-          </label>
+          <form className="mt-4" onSubmit={runSearch}>
+            <label className="block text-sm font-medium text-neutral-900" htmlFor="course-search">
+              Search
+              <input
+                id="course-search"
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Course code, title, or department"
+                className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm font-normal text-neutral-900"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-3 rounded-lg border border-neutral-900 bg-neutral-900 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? "Searching…" : "Search"}
+            </button>
+          </form>
           <div className="mt-4" aria-live="polite">
             {!modalOpen ? null : loading ? (
-              <p className="text-sm text-neutral-500">Loading</p>
+              <p className="text-sm text-neutral-500">Searching Supabase…</p>
+            ) : searchError ? (
+              <p className="text-sm text-red-600">{searchError}</p>
             ) : results.length === 0 ? (
               <div className="flex flex-col items-start gap-3">
-                <p className="text-sm text-neutral-500">No courses found</p>
+                <p className="text-sm text-neutral-500">
+                  {query.trim() ? "No courses found." : "Enter a search and press Search."}
+                </p>
                 <button
                   type="button"
                   onClick={() => openManualEntry(query.trim())}
