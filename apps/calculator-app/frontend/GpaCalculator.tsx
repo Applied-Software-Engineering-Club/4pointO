@@ -1,6 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
+import {
+  calculateCgpa,
+  calculateSemesterGpa,
+  type GpaCourse,
+} from "@/apps/calculator-app/backend/gpa";
 import { AddCourseDialog, type AddCourseDialogHandle } from "./AddCourseDialog";
 import { GpaResults } from "./GpaResults";
 
@@ -13,6 +18,22 @@ type CourseGrade = {
   percentGrade: string;
   credits: string;
 };
+
+function toGpaCourse(course: CourseGrade): GpaCourse {
+  return {
+    id: course.id,
+    courseName: course.courseName,
+    units: Number(course.credits),
+    season: course.season,
+    year: course.year,
+    letterGrade: course.letterGrade,
+    percentGrade: course.percentGrade,
+  };
+}
+
+function semesterIdFor(course: Pick<CourseGrade, "season" | "year">) {
+  return `${course.season} ${course.year}`;
+}
 
 const letterGrades = [
   "A+",
@@ -163,7 +184,11 @@ export function GpaCalculator() {
     setWhatIfEnabled(true);
   }
 
-  function appendCourse(idPrefix: string, courseName: string) {
+  function appendCourse(
+    idPrefix: string,
+    courseName: string,
+    credits?: string,
+  ) {
     setCourses((current) => [
       ...current,
       {
@@ -173,10 +198,20 @@ export function GpaCalculator() {
         year: defaultYear,
         letterGrade: "",
         percentGrade: "",
-        credits: "",
+        credits: credits ?? "",
       },
     ]);
   }
+
+  const displayCourses = courses.map((course) =>
+    whatIfEnabled ? { ...course, ...whatIfChanges[course.id] } : course,
+  );
+  const semesterId = displayCourses[0]
+    ? semesterIdFor(displayCourses[0])
+    : `Fall ${defaultYear}`;
+  const gpaCourses = displayCourses.map(toGpaCourse);
+  const semesterResult = calculateSemesterGpa(gpaCourses, semesterId);
+  const cgpaResult = calculateCgpa(gpaCourses);
 
   return (
     <main className="flex-1 bg-white px-6 py-6">
@@ -346,13 +381,12 @@ export function GpaCalculator() {
           })}
         </ul>
       </section>
-      {/* TODO: Replace placeholder values with the GPA engine results. */}
       <GpaResults
-        semesterLabel="Fall 2026"
-        semesterGpa={3.12}
-        semesterUnits={10}
-        cgpa={3.45}
-        totalUnits={24}
+        semesterLabel={semesterId}
+        semesterGpa={semesterResult.gpa}
+        semesterUnits={semesterResult.units}
+        cgpa={cgpaResult.gpa}
+        totalUnits={cgpaResult.units}
       />
       <AddCourseDialog ref={addCourseDialogRef} onAdd={appendCourse} />
     </main>
