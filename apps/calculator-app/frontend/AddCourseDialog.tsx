@@ -1,10 +1,8 @@
 "use client";
 
 import { useImperativeHandle, useRef, useState, type FormEvent, type MouseEvent, type Ref } from "react";
-import catalog from "@/utils/data/course-sample.json";
+import { searchCourses, type CatalogCourse } from "../backend/course-service";
 import { CourseDetails } from "./CourseDetails";
-
-type CatalogCourse = (typeof catalog.courses)[number];
 
 export type AddCourseDialogHandle = {
   open: () => void;
@@ -15,21 +13,6 @@ type AddCourseDialogProps = {
   onAdd: (idPrefix: string, courseName: string, credits?: string) => void;
 };
 
-function searchCatalog(query: string) {
-  const normalized = query.trim().toLowerCase();
-  if (!normalized) {
-    return [];
-  }
-
-  return catalog.courses
-    .filter((course) => {
-      return [course.code, course.title, course.section].some((value) =>
-        value?.toLowerCase().includes(normalized),
-      );
-    })
-    .slice(0, 20);
-}
-
 export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [entryMode, setEntryMode] = useState<"search" | "manual">("search");
@@ -37,6 +20,7 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
   const [results, setResults] = useState<CatalogCourse[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [manualName, setManualName] = useState("");
   const [manualError, setManualError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -58,6 +42,7 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
     setResults([]);
     setHasSearched(false);
     setLoading(false);
+    setSearchError(null);
     setManualName("");
     setManualError(null);
     setExpandedId(null);
@@ -72,13 +57,22 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
     closeCourseModal();
   }
 
-  function runSearch(event: FormEvent<HTMLFormElement>) {
+  async function runSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setHasSearched(true);
     setExpandedId(null);
+    setSearchError(null);
     setLoading(true);
-    setResults(searchCatalog(query));
-    setLoading(false);
+
+    try {
+      const normalized = query.trim();
+      setResults(normalized ? await searchCourses(normalized) : []);
+    } catch (error) {
+      setResults([]);
+      setSearchError(error instanceof Error ? error.message : "Unable to search courses.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   function openManualEntry(prefill = "") {
@@ -210,6 +204,8 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
           <div className="mt-4" aria-live="polite">
             {!hasSearched ? null : loading ? (
               <p className="text-sm text-neutral-500">Loading</p>
+            ) : searchError ? (
+              <p className="text-sm text-red-600">{searchError}</p>
             ) : results.length === 0 ? (
               <div className="flex flex-col items-start gap-3">
                 <p className="text-sm text-neutral-500">No courses found</p>

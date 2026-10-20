@@ -1,6 +1,4 @@
-import catalog from "@/utils/data/course-sample.json";
-
-type CatalogCourse = (typeof catalog.courses)[number];
+import type { CatalogCourse } from "../backend/course-service";
 
 type CourseDetailsProps = {
   course: CatalogCourse;
@@ -57,14 +55,16 @@ export function CourseDetails({ course }: CourseDetailsProps) {
         <DetailRow label="Notes" value={course.notes} />
       </dl>
 
-      <a
-        href={course.source_url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-4 inline-block text-sm font-medium text-neutral-900 underline hover:text-neutral-600"
-      >
-        View in SJSU catalog
-      </a>
+      {course.source_url ? (
+        <a
+          href={course.source_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 inline-block text-sm font-medium text-neutral-900 underline hover:text-neutral-600"
+        >
+          View in SJSU catalog
+        </a>
+      ) : null}
     </article>
   );
 }
