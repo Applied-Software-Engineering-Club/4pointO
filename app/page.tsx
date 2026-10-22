@@ -6,6 +6,7 @@ export default function Home() {
       <div className="flex flex-wrap gap-4">
         <Widget name="GPA Calc" href="/gpa-calc" />
         <Widget name="Example" href="/example" />
+        <Widget name="Syllabus Tracker" href="/syllabus-tracker" />
       </div>
     </main>
   );

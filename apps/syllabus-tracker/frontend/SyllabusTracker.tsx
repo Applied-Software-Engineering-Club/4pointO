@@ -1,0 +1,3 @@
+export function SyllabusTracker() {
+  return <main className="flex-1 bg-white px-6 py-6" />;
+}
