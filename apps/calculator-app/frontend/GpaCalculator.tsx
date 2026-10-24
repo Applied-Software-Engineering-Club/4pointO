@@ -26,6 +26,10 @@ function toGpaCourse(course: DisplayUserCourse): GpaCourse {
   };
 }
 
+function semesterIdFor(course: Pick<DisplayUserCourse, "season" | "year">) {
+  return [course.season, course.year].filter(Boolean).join(" ");
+}
+
 const seasonOrder: Record<string, number> = {
   Winter: 0,
   Spring: 1,
@@ -33,41 +37,28 @@ const seasonOrder: Record<string, number> = {
   Fall: 3,
 };
 
-function sectionTitle(course: Pick<DisplayUserCourse, "season" | "year">) {
-  return [course.season, course.year].filter(Boolean).join(" ") || "Undated";
+function termRank(title: string) {
+  const [season, year = ""] = title.split(" ");
+  const yearNumber = /^\d{4}$/.test(year) ? Number(year) : -1;
+  return yearNumber * 10 + (seasonOrder[season] ?? -1);
 }
 
-function courseSections(courses: DisplayUserCourse[]) {
+function coursesByTerm(courses: DisplayUserCourse[]) {
   const groups = new Map<string, DisplayUserCourse[]>();
 
   for (const course of courses) {
-    const title = sectionTitle(course);
-    const items = groups.get(title);
-    if (items) {
-      items.push(course);
+    const title = semesterIdFor(course) || "Unscheduled";
+    const group = groups.get(title);
+    if (group) {
+      group.push(course);
     } else {
       groups.set(title, [course]);
     }
   }
 
   return [...groups.entries()]
-    .map(([title, items]) => ({
-      title,
-      year: items[0]?.year ?? "",
-      season: items[0]?.season ?? "",
-      items,
-    }))
-    .sort((a, b) => {
-      const aDated = /^\d{4}$/.test(a.year);
-      const bDated = /^\d{4}$/.test(b.year);
-      if (aDated !== bDated) {
-        return aDated ? -1 : 1;
-      }
-      if (aDated && a.year !== b.year) {
-        return Number(b.year) - Number(a.year);
-      }
-      return (seasonOrder[b.season] ?? -1) - (seasonOrder[a.season] ?? -1);
-    });
+    .map(([title, termCourses]) => ({ title, courses: termCourses }))
+    .sort((a, b) => termRank(b.title) - termRank(a.title));
 }
 
 const letterGrades = [
@@ -278,8 +269,8 @@ export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
   const displayCourses = courses.map((course) =>
     whatIfEnabled ? { ...course, ...whatIfChanges[course.id] } : course,
   );
-  const sections = courseSections(displayCourses);
-  const semesterId = sections[0]?.title ?? `Fall ${defaultYear}`;
+  const termSections = coursesByTerm(displayCourses);
+  const semesterId = termSections[0]?.title ?? `Fall ${defaultYear}`;
   const gpaCourses = displayCourses.map(toGpaCourse);
   const semesterResult = calculateSemesterGpa(gpaCourses, semesterId);
   const cgpaResult = calculateCgpa(gpaCourses);
@@ -329,14 +320,15 @@ export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
           </div>
           <span className="size-6 shrink-0" aria-hidden="true" />
         </div>
-        <div className="mt-6 flex flex-col gap-6">
-          {sections.map((section) => (
+        <div className="mt-2 flex flex-col gap-6">
+          {termSections.map((section) => (
             <section key={section.title} aria-label={section.title}>
-              <h2 className="text-sm font-semibold text-neutral-900">{section.title}</h2>
+              <h2 className="text-sm font-semibold text-neutral-900">
+                {section.title}
+              </h2>
               <ul className="mt-2 flex flex-col gap-3">
-          {section.items.map((course) => {
+          {section.courses.map((course) => {
             const adjusting = editing || whatIfEnabled;
-            const row = course;
 
             return (
             <li
@@ -349,7 +341,7 @@ export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
                   <span className="inline-flex items-center gap-3">
                     <select
                       aria-label={`Season for ${course.courseName}`}
-                      value={row.season}
+                      value={course.season}
                       onChange={(event) =>
                         updateCourse(course.id, "season", event.target.value)
                       }
@@ -365,7 +357,7 @@ export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
                     <input
                       aria-label={`Year for ${course.courseName}`}
                       inputMode="numeric"
-                      value={row.year}
+                      value={course.year}
                       onChange={(event) =>
                         updateCourse(course.id, "year", event.target.value)
                       }
@@ -375,19 +367,19 @@ export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
                     />
                   </span>
                 ) : (
-                  <span>{[row.season, row.year].filter(Boolean).join(" ") || "—"}</span>
+                  <span>{semesterIdFor(course) || "—"}</span>
                 )}
                 {adjusting ? (
                   <select
                     aria-label={`Letter grade for ${course.courseName}`}
-                    value={row.letterGrade}
+                    value={course.letterGrade}
                     onChange={(event) =>
                       updateCourse(course.id, "letterGrade", event.target.value)
                     }
                     className={controlClassName}
                     style={{
                       ...dropdownArrow,
-                      width: dropdownWidth(row.letterGrade || "—"),
+                      width: dropdownWidth(course.letterGrade || "—"),
                     }}
                   >
                     <option value="">—</option>
@@ -398,25 +390,25 @@ export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
                     ))}
                   </select>
                 ) : (
-                  <span>{row.letterGrade || "—"}</span>
+                  <span>{course.letterGrade || "—"}</span>
                 )}
                 {adjusting ? (
                   <span className="inline-flex items-center">
                     <input
                       aria-label={`Percent grade for ${course.courseName}`}
                       inputMode="decimal"
-                      value={row.percentGrade}
+                      value={course.percentGrade}
                       onChange={(event) =>
                         updateCourse(course.id, "percentGrade", event.target.value)
                       }
                       placeholder="—"
-                      style={{ width: `${Math.max(row.percentGrade.length, 1)}ch` }}
+                      style={{ width: `${Math.max(course.percentGrade.length, 1)}ch` }}
                       className="bg-transparent p-0 font-medium text-inherit outline-none placeholder:text-neutral-900"
                     />
-                    {row.percentGrade ? "%" : null}
+                    {course.percentGrade ? "%" : null}
                   </span>
                 ) : (
-                  <span>{row.percentGrade ? `${row.percentGrade}%` : "—"}</span>
+                  <span>{course.percentGrade ? `${course.percentGrade}%` : "—"}</span>
                 )}
                 {editing && !whatIfEnabled ? (
                   <select
