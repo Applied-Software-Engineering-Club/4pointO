@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { addUserCourse } from "@/apps/calculator-app/backend/courses/addUserCourse";
+import type { CourseSelection } from "@/apps/calculator-app/backend/courses/userCourse";
 import {
   calculateCgpa,
   calculateSemesterGpa,
@@ -184,21 +186,23 @@ export function GpaCalculator() {
     setWhatIfEnabled(true);
   }
 
-  function appendCourse(
-    idPrefix: string,
-    courseName: string,
-    credits?: string,
-  ) {
+  async function appendCourse(course: CourseSelection) {
+    const saved = await addUserCourse({
+      ...course,
+      season: "Fall",
+      year: defaultYear,
+    });
+
     setCourses((current) => [
       ...current,
       {
-        id: `${idPrefix}-${crypto.randomUUID()}`,
-        courseName,
+        id: saved.id,
+        courseName: course.courseName.trim(),
         season: "Fall",
         year: defaultYear,
         letterGrade: "",
         percentGrade: "",
-        credits: credits ?? "",
+        credits: saved.units,
       },
     ]);
   }

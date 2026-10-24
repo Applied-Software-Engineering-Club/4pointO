@@ -1,7 +1,8 @@
 "use client";
 
-import { useImperativeHandle, useRef, useState, type FormEvent, type MouseEvent, type Ref } from "react";
+import { startTransition, useImperativeHandle, useRef, useState, type FormEvent, type MouseEvent, type Ref } from "react";
 import { searchCourses, type CatalogCourse } from "../backend/course-service";
+import type { CourseSelection } from "../backend/courses/userCourse";
 import { CourseDetails } from "./CourseDetails";
 
 export type AddCourseDialogHandle = {
@@ -10,7 +11,7 @@ export type AddCourseDialogHandle = {
 
 type AddCourseDialogProps = {
   ref?: Ref<AddCourseDialogHandle>;
-  onAdd: (idPrefix: string, courseName: string, credits?: string) => void;
+  onAdd: (course: CourseSelection) => Promise<void>;
 };
 
 export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
@@ -24,6 +25,9 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
   const [manualName, setManualName] = useState("");
   const [manualError, setManualError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
 
   useImperativeHandle(ref, () => ({
@@ -46,15 +50,31 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
     setManualName("");
     setManualError(null);
     setExpandedId(null);
+    setSaveError(null);
+    setSaving(false);
+    savingRef.current = false;
   }
 
-  function addCourse(
-    idPrefix: string,
-    courseName: string,
-    credits?: string,
-  ) {
-    onAdd(idPrefix, courseName, credits);
-    closeCourseModal();
+  function addCourse(course: CourseSelection) {
+    if (savingRef.current) {
+      return;
+    }
+
+    savingRef.current = true;
+    setSaving(true);
+    setSaveError(null);
+
+    startTransition(async () => {
+      try {
+        await onAdd(course);
+        closeCourseModal();
+      } catch {
+        setSaveError("Couldn't save this course. Try again.");
+      } finally {
+        savingRef.current = false;
+        setSaving(false);
+      }
+    });
   }
 
   async function runSearch(event: FormEvent<HTMLFormElement>) {
@@ -89,7 +109,11 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
       return;
     }
 
-    addCourse("manual", courseName);
+    addCourse({
+      source: "manual",
+      catalogCourseId: null,
+      courseName,
+    });
   }
 
   function closeOnBackdropClick(event: MouseEvent<HTMLDialogElement>) {
@@ -166,9 +190,10 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
             />
             <button
               type="submit"
-              className="shrink-0 rounded-md px-2.5 py-1 text-xs font-medium text-neutral-900 hover:bg-neutral-50"
+              disabled={saving}
+              className="shrink-0 rounded-md px-2.5 py-1 text-xs font-medium text-neutral-900 hover:bg-neutral-50 disabled:opacity-60"
             >
-              Add course
+              {saving ? "Saving" : "Add course"}
             </button>
           </div>
           {manualError ? (
@@ -252,16 +277,18 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
                         </button>
                         <button
                           type="button"
+                          disabled={saving}
                           onClick={() =>
-                            addCourse(
-                              course.catalog_course_id,
-                              course.code,
-                              String(course.units_min),
-                            )
+                            addCourse({
+                              source: "catalog",
+                              catalogCourseId: course.catalog_course_id,
+                              courseName: course.code,
+                              units: course.units_min,
+                            })
                           }
-                          className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-900 shadow-sm hover:bg-neutral-50"
+                          className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-900 shadow-sm hover:bg-neutral-50 disabled:opacity-60"
                         >
-                          Add course
+                          {saving ? "Saving" : "Add course"}
                         </button>
                       </div>
                       {detailsOpen ? (
@@ -280,6 +307,9 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
           </div>
         </>
       )}
+      {saveError ? (
+        <p className="mt-4 text-sm text-red-600">{saveError}</p>
+      ) : null}
     </dialog>
   );
 }
