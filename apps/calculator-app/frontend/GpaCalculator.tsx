@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { addUserCourse } from "@/apps/calculator-app/backend/courses/addUserCourse";
 import { deleteUserCourse } from "@/apps/calculator-app/backend/courses/deleteUserCourse";
+import { updateUserCourses } from "@/apps/calculator-app/backend/courses/updateUserCourses";
 import type { DisplayUserCourse } from "@/apps/calculator-app/backend/courses/listUserCourses";
 import type { CourseSelection } from "@/apps/calculator-app/backend/courses/userCourse";
 import {
@@ -99,7 +100,10 @@ export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
   >({});
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [savingEdits, setSavingEdits] = useState(false);
   const deletingRef = useRef(false);
+  const savingRef = useRef(false);
 
   async function removeCourse(id: string) {
     if (deletingRef.current) {
@@ -162,12 +166,38 @@ export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
     );
   }
 
-  function toggleEditing() {
+  async function toggleEditing() {
     if (whatIfEnabled) {
       setWhatIfChanges({});
       setWhatIfEnabled(false);
+      setEditing(true);
+      return;
     }
-    setEditing((current) => !current);
+
+    if (!editing) {
+      setSaveError(null);
+      setEditing(true);
+      return;
+    }
+
+    if (savingRef.current) {
+      return;
+    }
+
+    savingRef.current = true;
+    setSavingEdits(true);
+    setSaveError(null);
+
+    try {
+      const saved = await updateUserCourses(courses);
+      setCourses(saved);
+      setEditing(false);
+    } catch {
+      setSaveError("Couldn't save these changes. Try again.");
+    } finally {
+      savingRef.current = false;
+      setSavingEdits(false);
+    }
   }
 
   function toggleWhatIf() {
@@ -235,10 +265,11 @@ export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
           <button
             type="button"
             aria-pressed={editing}
+            disabled={savingEdits}
             onClick={toggleEditing}
             className={quietButtonClassName}
           >
-            {editing ? "Done" : "Edit"}
+            {savingEdits ? "Saving" : editing ? "Done" : "Edit"}
           </button>
           <button
             type="button"
@@ -383,6 +414,9 @@ export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
             );
           })}
         </ul>
+        {saveError ? (
+          <p className="mt-3 text-sm text-red-600">{saveError}</p>
+        ) : null}
         {deleteError ? (
           <p className="mt-3 text-sm text-red-600">{deleteError}</p>
         ) : null}
