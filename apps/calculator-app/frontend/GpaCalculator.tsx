@@ -26,8 +26,48 @@ function toGpaCourse(course: DisplayUserCourse): GpaCourse {
   };
 }
 
-function semesterIdFor(course: Pick<DisplayUserCourse, "season" | "year">) {
-  return `${course.season} ${course.year}`;
+const seasonOrder: Record<string, number> = {
+  Winter: 0,
+  Spring: 1,
+  Summer: 2,
+  Fall: 3,
+};
+
+function sectionTitle(course: Pick<DisplayUserCourse, "season" | "year">) {
+  return [course.season, course.year].filter(Boolean).join(" ") || "Undated";
+}
+
+function courseSections(courses: DisplayUserCourse[]) {
+  const groups = new Map<string, DisplayUserCourse[]>();
+
+  for (const course of courses) {
+    const title = sectionTitle(course);
+    const items = groups.get(title);
+    if (items) {
+      items.push(course);
+    } else {
+      groups.set(title, [course]);
+    }
+  }
+
+  return [...groups.entries()]
+    .map(([title, items]) => ({
+      title,
+      year: items[0]?.year ?? "",
+      season: items[0]?.season ?? "",
+      items,
+    }))
+    .sort((a, b) => {
+      const aDated = /^\d{4}$/.test(a.year);
+      const bDated = /^\d{4}$/.test(b.year);
+      if (aDated !== bDated) {
+        return aDated ? -1 : 1;
+      }
+      if (aDated && a.year !== b.year) {
+        return Number(b.year) - Number(a.year);
+      }
+      return (seasonOrder[b.season] ?? -1) - (seasonOrder[a.season] ?? -1);
+    });
 }
 
 const letterGrades = [
@@ -238,9 +278,8 @@ export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
   const displayCourses = courses.map((course) =>
     whatIfEnabled ? { ...course, ...whatIfChanges[course.id] } : course,
   );
-  const semesterId = displayCourses[0]
-    ? semesterIdFor(displayCourses[0])
-    : `Fall ${defaultYear}`;
+  const sections = courseSections(displayCourses);
+  const semesterId = sections[0]?.title ?? `Fall ${defaultYear}`;
   const gpaCourses = displayCourses.map(toGpaCourse);
   const semesterResult = calculateSemesterGpa(gpaCourses, semesterId);
   const cgpaResult = calculateCgpa(gpaCourses);
@@ -290,12 +329,14 @@ export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
           </div>
           <span className="size-6 shrink-0" aria-hidden="true" />
         </div>
-        <ul className="mt-2 flex flex-col gap-3">
-          {courses.map((course) => {
-            const row = whatIfEnabled
-              ? { ...course, ...whatIfChanges[course.id] }
-              : course;
+        <div className="mt-6 flex flex-col gap-6">
+          {sections.map((section) => (
+            <section key={section.title} aria-label={section.title}>
+              <h2 className="text-sm font-semibold text-neutral-900">{section.title}</h2>
+              <ul className="mt-2 flex flex-col gap-3">
+          {section.items.map((course) => {
             const adjusting = editing || whatIfEnabled;
+            const row = course;
 
             return (
             <li
@@ -413,7 +454,10 @@ export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
             </li>
             );
           })}
-        </ul>
+              </ul>
+            </section>
+          ))}
+        </div>
         {saveError ? (
           <p className="mt-3 text-sm text-red-600">{saveError}</p>
         ) : null}
