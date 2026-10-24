@@ -68,8 +68,13 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
       try {
         await onAdd(course);
         closeCourseModal();
-      } catch {
-        setSaveError("Couldn't save this course. Try again.");
+      } catch (error) {
+        setSaveError(
+          error instanceof Error &&
+            error.message === "This course is already in your list."
+            ? error.message
+            : "Couldn't save this course. Try again.",
+        );
       } finally {
         savingRef.current = false;
         setSaving(false);

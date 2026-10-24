@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { addUserCourse } from "@/apps/calculator-app/backend/courses/addUserCourse";
 import { deleteUserCourse } from "@/apps/calculator-app/backend/courses/deleteUserCourse";
+import type { DisplayUserCourse } from "@/apps/calculator-app/backend/courses/listUserCourses";
 import type { CourseSelection } from "@/apps/calculator-app/backend/courses/userCourse";
 import {
   calculateCgpa,
@@ -12,17 +13,7 @@ import {
 import { AddCourseDialog, type AddCourseDialogHandle } from "./AddCourseDialog";
 import { GpaResults } from "./GpaResults";
 
-type CourseGrade = {
-  id: string;
-  courseName: string;
-  season: string;
-  year: string;
-  letterGrade: string;
-  percentGrade: string;
-  credits: string;
-};
-
-function toGpaCourse(course: CourseGrade): GpaCourse {
+function toGpaCourse(course: DisplayUserCourse): GpaCourse {
   return {
     id: course.id,
     courseName: course.courseName,
@@ -34,7 +25,7 @@ function toGpaCourse(course: CourseGrade): GpaCourse {
   };
 }
 
-function semesterIdFor(course: Pick<CourseGrade, "season" | "year">) {
+function semesterIdFor(course: Pick<DisplayUserCourse, "season" | "year">) {
   return `${course.season} ${course.year}`;
 }
 
@@ -63,27 +54,6 @@ const creditOptions = ["1", "2", "3", "4"];
 const seasons = ["Fall", "Spring", "Summer"];
 const defaultYear = String(new Date().getFullYear());
 
-const initialCourses: CourseGrade[] = [
-  {
-    id: "cs-151",
-    courseName: "CS 151",
-    season: "Fall",
-    year: "2026",
-    letterGrade: "B+",
-    percentGrade: "89.51",
-    credits: "3",
-  },
-  {
-    id: "cs-160",
-    courseName: "CS 160",
-    season: "Fall",
-    year: "2026",
-    letterGrade: "B+",
-    percentGrade: "89.51",
-    credits: "3",
-  },
-];
-
 const columnClassName = "grid grid-cols-5 gap-2 whitespace-nowrap sm:gap-8";
 const controlClassName =
   "cursor-pointer appearance-none justify-self-start border-0 bg-transparent bg-[length:0.65rem] bg-[position:right_center] bg-no-repeat p-0 pr-[0.85rem] font-medium text-inherit outline-none";
@@ -98,6 +68,10 @@ const activeButtonClassName =
   "rounded-lg border border-neutral-900 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-white";
 
 type CourseField = "season" | "year" | "letterGrade" | "percentGrade";
+
+type GpaCalculatorProps = {
+  courses: DisplayUserCourse[];
+};
 
 function dropdownWidth(label: string) {
   return `calc(${Math.max(label.length, 1)}ch + 0.85rem)`;
@@ -115,13 +89,13 @@ function isPercentDraft(value: string) {
   return /^\d{1,3}(\.\d{0,2})?$/.test(value) && Number(value) <= 100;
 }
 
-export function GpaCalculator() {
+export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
   const addCourseDialogRef = useRef<AddCourseDialogHandle>(null);
-  const [courses, setCourses] = useState(initialCourses);
+  const [courses, setCourses] = useState(loadedCourses);
   const [editing, setEditing] = useState(false);
   const [whatIfEnabled, setWhatIfEnabled] = useState(false);
   const [whatIfChanges, setWhatIfChanges] = useState<
-    Record<string, Partial<Pick<CourseGrade, CourseField>>>
+    Record<string, Partial<Pick<DisplayUserCourse, CourseField>>>
   >({});
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -213,16 +187,20 @@ export function GpaCalculator() {
       year: defaultYear,
     });
 
+    if (saved.duplicate) {
+      throw new Error("This course is already in your list.");
+    }
+
     setCourses((current) => [
       ...current,
       {
-        id: saved.id,
+        id: saved.course.id,
         courseName: course.courseName.trim(),
         season: "Fall",
         year: defaultYear,
         letterGrade: "",
         percentGrade: "",
-        credits: saved.units,
+        credits: saved.course.units,
       },
     ]);
   }
