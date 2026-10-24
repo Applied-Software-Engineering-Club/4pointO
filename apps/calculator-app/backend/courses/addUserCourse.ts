@@ -48,7 +48,7 @@ export async function addUserCourse(
   }
 
   const { data, error } = await supabase
-    .from("gpa_calc_user_courses")
+    .from("gpa-calc-user-courses")
     .insert({
       user_id: auth.user.id,
       season: course.season,
