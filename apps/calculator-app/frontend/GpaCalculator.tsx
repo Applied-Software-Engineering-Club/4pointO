@@ -1,6 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { addUserCourse } from "@/apps/calculator-app/backend/courses/addUserCourse";
+import { deleteUserCourse } from "@/apps/calculator-app/backend/courses/deleteUserCourse";
+import { updateUserCourses } from "@/apps/calculator-app/backend/courses/updateUserCourses";
+import type { DisplayUserCourse } from "@/apps/calculator-app/backend/courses/listUserCourses";
+import type { CourseSelection } from "@/apps/calculator-app/backend/courses/userCourse";
 import {
   calculateCgpa,
   calculateSemesterGpa,
@@ -9,17 +14,7 @@ import {
 import { AddCourseDialog, type AddCourseDialogHandle } from "./AddCourseDialog";
 import { GpaResults } from "./GpaResults";
 
-type CourseGrade = {
-  id: string;
-  courseName: string;
-  season: string;
-  year: string;
-  letterGrade: string;
-  percentGrade: string;
-  credits: string;
-};
-
-function toGpaCourse(course: CourseGrade): GpaCourse {
+function toGpaCourse(course: DisplayUserCourse): GpaCourse {
   return {
     id: course.id,
     courseName: course.courseName,
@@ -31,7 +26,7 @@ function toGpaCourse(course: CourseGrade): GpaCourse {
   };
 }
 
-function semesterIdFor(course: Pick<CourseGrade, "season" | "year">) {
+function semesterIdFor(course: Pick<DisplayUserCourse, "season" | "year">) {
   return `${course.season} ${course.year}`;
 }
 
@@ -60,27 +55,6 @@ const creditOptions = ["1", "2", "3", "4"];
 const seasons = ["Fall", "Spring", "Summer"];
 const defaultYear = String(new Date().getFullYear());
 
-const initialCourses: CourseGrade[] = [
-  {
-    id: "cs-151",
-    courseName: "CS 151",
-    season: "Fall",
-    year: "2026",
-    letterGrade: "B+",
-    percentGrade: "89.51",
-    credits: "3",
-  },
-  {
-    id: "cs-160",
-    courseName: "CS 160",
-    season: "Fall",
-    year: "2026",
-    letterGrade: "B+",
-    percentGrade: "89.51",
-    credits: "3",
-  },
-];
-
 const columnClassName = "grid grid-cols-5 gap-2 whitespace-nowrap sm:gap-8";
 const controlClassName =
   "cursor-pointer appearance-none justify-self-start border-0 bg-transparent bg-[length:0.65rem] bg-[position:right_center] bg-no-repeat p-0 pr-[0.85rem] font-medium text-inherit outline-none";
@@ -95,6 +69,10 @@ const activeButtonClassName =
   "rounded-lg border border-neutral-900 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-white";
 
 type CourseField = "season" | "year" | "letterGrade" | "percentGrade";
+
+type GpaCalculatorProps = {
+  courses: DisplayUserCourse[];
+};
 
 function dropdownWidth(label: string) {
   return `calc(${Math.max(label.length, 1)}ch + 0.85rem)`;
@@ -112,22 +90,44 @@ function isPercentDraft(value: string) {
   return /^\d{1,3}(\.\d{0,2})?$/.test(value) && Number(value) <= 100;
 }
 
-export function GpaCalculator() {
+export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
   const addCourseDialogRef = useRef<AddCourseDialogHandle>(null);
-  const [courses, setCourses] = useState(initialCourses);
+  const [courses, setCourses] = useState(loadedCourses);
   const [editing, setEditing] = useState(false);
   const [whatIfEnabled, setWhatIfEnabled] = useState(false);
   const [whatIfChanges, setWhatIfChanges] = useState<
-    Record<string, Partial<Pick<CourseGrade, CourseField>>>
+    Record<string, Partial<Pick<DisplayUserCourse, CourseField>>>
   >({});
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [savingEdits, setSavingEdits] = useState(false);
+  const deletingRef = useRef(false);
+  const savingRef = useRef(false);
 
-  function removeCourse(id: string) {
-    setCourses((current) => current.filter((course) => course.id !== id));
-    setWhatIfChanges((current) => {
-      const next = { ...current };
-      delete next[id];
-      return next;
-    });
+  async function removeCourse(id: string) {
+    if (deletingRef.current) {
+      return;
+    }
+
+    deletingRef.current = true;
+    setDeleteError(null);
+    setDeletingId(id);
+
+    try {
+      await deleteUserCourse(id);
+      setCourses((current) => current.filter((course) => course.id !== id));
+      setWhatIfChanges((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+    } catch {
+      setDeleteError("Couldn't remove this course. Try again.");
+    } finally {
+      deletingRef.current = false;
+      setDeletingId(null);
+    }
   }
 
   function updateCourse(id: string, field: CourseField, value: string) {
@@ -166,12 +166,38 @@ export function GpaCalculator() {
     );
   }
 
-  function toggleEditing() {
+  async function toggleEditing() {
     if (whatIfEnabled) {
       setWhatIfChanges({});
       setWhatIfEnabled(false);
+      setEditing(true);
+      return;
     }
-    setEditing((current) => !current);
+
+    if (!editing) {
+      setSaveError(null);
+      setEditing(true);
+      return;
+    }
+
+    if (savingRef.current) {
+      return;
+    }
+
+    savingRef.current = true;
+    setSavingEdits(true);
+    setSaveError(null);
+
+    try {
+      const saved = await updateUserCourses(courses);
+      setCourses(saved);
+      setEditing(false);
+    } catch {
+      setSaveError("Couldn't save these changes. Try again.");
+    } finally {
+      savingRef.current = false;
+      setSavingEdits(false);
+    }
   }
 
   function toggleWhatIf() {
@@ -184,21 +210,27 @@ export function GpaCalculator() {
     setWhatIfEnabled(true);
   }
 
-  function appendCourse(
-    idPrefix: string,
-    courseName: string,
-    credits?: string,
-  ) {
+  async function appendCourse(course: CourseSelection) {
+    const saved = await addUserCourse({
+      ...course,
+      season: "Fall",
+      year: defaultYear,
+    });
+
+    if (saved.duplicate) {
+      throw new Error("This course is already in your list.");
+    }
+
     setCourses((current) => [
       ...current,
       {
-        id: `${idPrefix}-${crypto.randomUUID()}`,
-        courseName,
+        id: saved.course.id,
+        courseName: course.courseName.trim(),
         season: "Fall",
         year: defaultYear,
         letterGrade: "",
         percentGrade: "",
-        credits: credits ?? "",
+        credits: saved.course.units,
       },
     ]);
   }
@@ -233,10 +265,11 @@ export function GpaCalculator() {
           <button
             type="button"
             aria-pressed={editing}
+            disabled={savingEdits}
             onClick={toggleEditing}
             className={quietButtonClassName}
           >
-            {editing ? "Done" : "Edit"}
+            {savingEdits ? "Saving" : editing ? "Done" : "Edit"}
           </button>
           <button
             type="button"
@@ -371,8 +404,9 @@ export function GpaCalculator() {
               <button
                 type="button"
                 aria-label={`Remove ${course.courseName}`}
+                disabled={deletingId === course.id}
                 onClick={() => removeCourse(course.id)}
-                className="inline-flex size-6 shrink-0 items-center justify-center text-lg leading-none font-semibold text-red-600 hover:text-red-700"
+                className="inline-flex size-6 shrink-0 items-center justify-center text-lg leading-none font-semibold text-red-600 hover:text-red-700 disabled:opacity-60"
               >
                 ×
               </button>
@@ -380,6 +414,12 @@ export function GpaCalculator() {
             );
           })}
         </ul>
+        {saveError ? (
+          <p className="mt-3 text-sm text-red-600">{saveError}</p>
+        ) : null}
+        {deleteError ? (
+          <p className="mt-3 text-sm text-red-600">{deleteError}</p>
+        ) : null}
       </section>
       <GpaResults
         semesterLabel={semesterId}
