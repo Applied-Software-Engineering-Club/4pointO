@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { addUserCourse } from "@/apps/calculator-app/backend/courses/addUserCourse";
+import { deleteUserCourse } from "@/apps/calculator-app/backend/courses/deleteUserCourse";
 import type { CourseSelection } from "@/apps/calculator-app/backend/courses/userCourse";
 import {
   calculateCgpa,
@@ -122,14 +123,33 @@ export function GpaCalculator() {
   const [whatIfChanges, setWhatIfChanges] = useState<
     Record<string, Partial<Pick<CourseGrade, CourseField>>>
   >({});
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deletingRef = useRef(false);
 
-  function removeCourse(id: string) {
-    setCourses((current) => current.filter((course) => course.id !== id));
-    setWhatIfChanges((current) => {
-      const next = { ...current };
-      delete next[id];
-      return next;
-    });
+  async function removeCourse(id: string) {
+    if (deletingRef.current) {
+      return;
+    }
+
+    deletingRef.current = true;
+    setDeleteError(null);
+    setDeletingId(id);
+
+    try {
+      await deleteUserCourse(id);
+      setCourses((current) => current.filter((course) => course.id !== id));
+      setWhatIfChanges((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+    } catch {
+      setDeleteError("Couldn't remove this course. Try again.");
+    } finally {
+      deletingRef.current = false;
+      setDeletingId(null);
+    }
   }
 
   function updateCourse(id: string, field: CourseField, value: string) {
@@ -375,8 +395,9 @@ export function GpaCalculator() {
               <button
                 type="button"
                 aria-label={`Remove ${course.courseName}`}
+                disabled={deletingId === course.id}
                 onClick={() => removeCourse(course.id)}
-                className="inline-flex size-6 shrink-0 items-center justify-center text-lg leading-none font-semibold text-red-600 hover:text-red-700"
+                className="inline-flex size-6 shrink-0 items-center justify-center text-lg leading-none font-semibold text-red-600 hover:text-red-700 disabled:opacity-60"
               >
                 ×
               </button>
@@ -384,6 +405,9 @@ export function GpaCalculator() {
             );
           })}
         </ul>
+        {deleteError ? (
+          <p className="mt-3 text-sm text-red-600">{deleteError}</p>
+        ) : null}
       </section>
       <GpaResults
         semesterLabel={semesterId}
