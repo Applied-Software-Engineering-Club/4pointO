@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Calendar } from "./Calendar";
 
 const tabs = ["Main", "Calendar"] as const;
 
@@ -37,6 +38,13 @@ export function SyllabusTracker() {
           );
         })}
       </div>
+      {tab === "Calendar" ? (
+        <div role="tabpanel" aria-label="Calendar">
+          <Calendar />
+        </div>
+      ) : (
+        <div role="tabpanel" aria-label="Main" />
+      )}
     </main>
   );
 }
