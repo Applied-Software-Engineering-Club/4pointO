@@ -1,90 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
-
-type Course = {
-  id: string;
-  courseNumber: string;
-  courseName: string;
-  courseDays: string;
-  courseStart: string;
-  courseEnd: string;
-  officeHoursDays: string;
-  officeHoursStart: string;
-  officeHoursEnd: string;
-  professorName: string;
-  professorEmail: string;
-  prerequisites: string;
-  homeworkCompleted: number;
-  homeworkTotal: number;
-  examsCompleted: number;
-  examsTotal: number;
-  projectsCompleted: number;
-  projectsTotal: number;
-};
-
-const courses: Course[] = [
-  {
-    id: "cs-151",
-    courseNumber: "CS 151",
-    courseName: "Object Oriented Programming",
-    courseDays: "TuTh",
-    courseStart: "13:30",
-    courseEnd: "14:30",
-    officeHoursDays: "W",
-    officeHoursStart: "15:00",
-    officeHoursEnd: "16:00",
-    professorName: "Ada Lovelace",
-    professorEmail: "ada.lovelace@sjsu.edu",
-    prerequisites: "CS 46B, MATH 42",
-    homeworkCompleted: 4,
-    homeworkTotal: 5,
-    examsCompleted: 1,
-    examsTotal: 2,
-    projectsCompleted: 1,
-    projectsTotal: 3,
-  },
-  {
-    id: "cs-146",
-    courseNumber: "CS 146",
-    courseName: "Data Structures and Algorithms",
-    courseDays: "MW",
-    courseStart: "09:00",
-    courseEnd: "10:15",
-    officeHoursDays: "M",
-    officeHoursStart: "14:00",
-    officeHoursEnd: "15:30",
-    professorName: "Grace Hopper",
-    professorEmail: "grace.hopper@sjsu.edu",
-    prerequisites: "CS 46B, MATH 30",
-    homeworkCompleted: 6,
-    homeworkTotal: 8,
-    examsCompleted: 0,
-    examsTotal: 2,
-    projectsCompleted: 2,
-    projectsTotal: 2,
-  },
-  {
-    id: "math-161a",
-    courseNumber: "MATH 161A",
-    courseName: "Applied Probability and Statistics",
-    courseDays: "MWF",
-    courseStart: "11:00",
-    courseEnd: "11:50",
-    officeHoursDays: "F",
-    officeHoursStart: "12:00",
-    officeHoursEnd: "13:00",
-    professorName: "Katherine Johnson",
-    professorEmail: "katherine.johnson@sjsu.edu",
-    prerequisites: "MATH 31",
-    homeworkCompleted: 3,
-    homeworkTotal: 10,
-    examsCompleted: 1,
-    examsTotal: 3,
-    projectsCompleted: 0,
-    projectsTotal: 1,
-  },
-];
+import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { addUserCourse } from "@/apps/syllabus-tracker/backend/courses/addUserCourse";
+import { deleteUserCourse } from "@/apps/syllabus-tracker/backend/courses/deleteUserCourse";
+import { listUserCourses } from "@/apps/syllabus-tracker/backend/courses/listUserCourses";
+import { updateCourseProgress } from "@/apps/syllabus-tracker/backend/courses/updateCourseProgress";
+import {
+  progressSliderMax,
+  type CourseProgress,
+  type UserCourse,
+  type UserCourseDraft,
+} from "@/apps/syllabus-tracker/backend/courses/userCourse";
 
 type Progress = {
   label: string;
@@ -136,7 +62,126 @@ function Detail({ label, value }: { label: string; value: string }) {
   );
 }
 
-function CourseDetails({ course, onClose }: { course: Course; onClose: () => void }) {
+const progressRows = [
+  { label: "Homework", completed: "homeworkCompleted", total: "homeworkTotal" },
+  { label: "Exams", completed: "examsCompleted", total: "examsTotal" },
+  { label: "Projects", completed: "projectsCompleted", total: "projectsTotal" },
+] as const;
+
+function progressOf(course: CourseProgress): CourseProgress {
+  return {
+    homeworkCompleted: course.homeworkCompleted,
+    homeworkTotal: course.homeworkTotal,
+    examsCompleted: course.examsCompleted,
+    examsTotal: course.examsTotal,
+    projectsCompleted: course.projectsCompleted,
+    projectsTotal: course.projectsTotal,
+  };
+}
+
+function ProgressControls({
+  value,
+  onChange,
+}: {
+  value: CourseProgress;
+  onChange: (value: CourseProgress) => void;
+}) {
+  const totalCompleted =
+    value.homeworkCompleted + value.examsCompleted + value.projectsCompleted;
+  const totalMax = value.homeworkTotal + value.examsTotal + value.projectsTotal;
+
+  function change(key: keyof CourseProgress, nextValue: number) {
+    const next = { ...value, [key]: nextValue };
+    for (const row of progressRows) {
+      if (next[row.completed] > next[row.total]) {
+        next[row.completed] = next[row.total];
+      }
+    }
+    onChange(next);
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      {progressRows.map((row) => {
+        const completed = value[row.completed];
+        const total = value[row.total];
+        const limit = Math.max(progressSliderMax, total);
+
+        return (
+          <div key={row.label}>
+            <p className="text-sm font-medium text-neutral-900">{row.label}</p>
+            <div
+              className="mt-1.5 h-2 overflow-hidden rounded-full bg-neutral-200"
+              role="progressbar"
+              aria-label={row.label}
+              aria-valuemin={0}
+              aria-valuemax={Math.max(total, 1)}
+              aria-valuenow={total === 0 ? 0 : completed}
+              aria-valuetext={total === 0 ? "0 of 0" : `${completed} of ${total}`}
+            >
+              <div
+                className="h-full rounded-full bg-neutral-900"
+                style={{ width: total === 0 ? "0%" : `${(completed / total) * 100}%` }}
+              />
+            </div>
+            <div className="mt-1.5 flex items-center gap-2">
+              <div className="flex min-w-0 flex-1" role="group" aria-label={`${row.label} ticks`}>
+                {Array.from({ length: total }, (_, index) => {
+                  const on = index < completed;
+
+                  return (
+                    <button
+                      key={index}
+                      type="button"
+                      aria-pressed={on}
+                      aria-label={`${row.label} ${index + 1} of ${total}`}
+                      onClick={() =>
+                        change(row.completed, index + 1 === completed ? index : index + 1)
+                      }
+                      className="flex h-4 min-w-0 flex-1 items-center justify-center"
+                    >
+                      <span
+                        className={`size-1.5 rounded-full ${on ? "bg-neutral-900" : "bg-neutral-300"}`}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+              <input
+                type="number"
+                inputMode="numeric"
+                aria-label={`${row.label} max`}
+                min={0}
+                max={limit}
+                value={total}
+                onChange={(event) => {
+                  const next = Number(event.target.value);
+                  if (Number.isInteger(next) && next >= 0 && next <= limit) {
+                    change(row.total, next);
+                  }
+                }}
+                className="w-12 shrink-0 rounded border border-neutral-200 px-1 py-0.5 text-right text-xs text-neutral-900 outline-none"
+              />
+            </div>
+          </div>
+        );
+      })}
+      <ProgressBar label="Total" completed={totalCompleted} total={totalMax} />
+    </div>
+  );
+}
+
+function CourseDetails({
+  course,
+  onClose,
+  onProgress,
+  onDelete,
+}: {
+  course: UserCourse;
+  onClose: () => void;
+  onProgress: (course: UserCourse) => void;
+  onDelete: (id: string) => void;
+}) {
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
   const courseTime = formatWindow(course.courseDays, course.courseStart, course.courseEnd);
@@ -145,29 +190,49 @@ function CourseDetails({ course, onClose }: { course: Course; onClose: () => voi
     course.officeHoursStart,
     course.officeHoursEnd,
   );
-  const progress: Progress[] = [
-    {
-      label: "Homework",
-      completed: course.homeworkCompleted,
-      total: course.homeworkTotal,
-    },
-    {
-      label: "Exams",
-      completed: course.examsCompleted,
-      total: course.examsTotal,
-    },
-    {
-      label: "Projects",
-      completed: course.projectsCompleted,
-      total: course.projectsTotal,
-    },
-    {
-      label: "Total",
-      completed:
-        course.homeworkCompleted + course.examsCompleted + course.projectsCompleted,
-      total: course.homeworkTotal + course.examsTotal + course.projectsTotal,
-    },
-  ];
+  const [progress, setProgress] = useState<CourseProgress>(() => progressOf(course));
+  const [progressError, setProgressError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const savingRef = useRef(false);
+
+  async function saveProgress() {
+    if (savingRef.current) {
+      return;
+    }
+
+    savingRef.current = true;
+    setSaving(true);
+    setProgressError(null);
+
+    try {
+      onProgress(await updateCourseProgress(course.id, progress));
+    } catch (caught) {
+      setProgressError(caught instanceof Error ? caught.message : "Couldn't save this course.");
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
+  }
+
+  async function removeCourse() {
+    if (savingRef.current) {
+      return;
+    }
+
+    savingRef.current = true;
+    setDeleting(true);
+    setProgressError(null);
+
+    try {
+      await deleteUserCourse(course.id);
+      onDelete(course.id);
+    } catch (caught) {
+      setProgressError(caught instanceof Error ? caught.message : "Couldn't remove this course.");
+      savingRef.current = false;
+      setDeleting(false);
+    }
+  }
 
   useEffect(() => {
     closeRef.current?.focus();
@@ -238,27 +303,347 @@ function CourseDetails({ course, onClose }: { course: Course; onClose: () => voi
           <Detail label="Prerequisites" value={course.prerequisites} />
         </dl>
 
-        <div className="mt-6 flex flex-col gap-4">
-          {progress.map((item) => (
-            <ProgressBar key={item.label} {...item} />
-          ))}
+        <div className="mt-6">
+          <ProgressControls value={progress} onChange={setProgress} />
+          {progressError ? <p className="mt-3 text-sm text-red-700">{progressError}</p> : null}
+          <div className="mt-4 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => void removeCourse()}
+              disabled={saving || deleting}
+              className="rounded-lg px-2 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-60"
+            >
+              {deleting ? "Deleting" : "Delete"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void saveProgress()}
+              disabled={saving || deleting}
+              className="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-60"
+            >
+              {saving ? "Saving" : "Save"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
+const emptyDraft: UserCourseDraft = {
+  courseNumber: "",
+  courseName: "",
+  courseDays: "",
+  courseStart: "",
+  courseEnd: "",
+  officeHoursDays: "",
+  officeHoursStart: "",
+  officeHoursEnd: "",
+  professorName: "",
+  professorEmail: "",
+  prerequisites: "",
+  homeworkCompleted: 0,
+  homeworkTotal: 0,
+  examsCompleted: 0,
+  examsTotal: 0,
+  projectsCompleted: 0,
+  projectsTotal: 0,
+};
+
+const fieldClassName =
+  "mt-1 w-full rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-sm text-neutral-900 outline-none focus:border-neutral-400";
+
+function Field({
+  label,
+  value,
+  onChange,
+  type = "text",
+  required = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: "text" | "time" | "email";
+  required?: boolean;
+}) {
+  const id = useId();
+
+  return (
+    <div>
+      <label htmlFor={id} className="text-xs font-medium text-neutral-500">
+        {label}
+      </label>
+      <input
+        id={id}
+        type={type}
+        required={required}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={fieldClassName}
+      />
+    </div>
+  );
+}
+
+function AddCourseDialog({
+  onClose,
+  onSave,
+}: {
+  onClose: () => void;
+  onSave: (course: UserCourse) => void;
+}) {
+  const titleId = useId();
+  const numberRef = useRef<HTMLInputElement>(null);
+  const savingRef = useRef(false);
+  const [draft, setDraft] = useState(emptyDraft);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    numberRef.current?.focus();
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onClose]);
+
+  function update(field: keyof UserCourseDraft, value: string) {
+    setDraft((current) => ({ ...current, [field]: value }));
+  }
+
+  async function save(event: FormEvent) {
+    event.preventDefault();
+    if (savingRef.current) {
+      return;
+    }
+
+    savingRef.current = true;
+    setSaving(true);
+    setError(null);
+
+    try {
+      onSave(await addUserCourse(draft));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Couldn't save this course.");
+      savingRef.current = false;
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-neutral-900/30 p-4"
+      onClick={onClose}
+    >
+      <form
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        onSubmit={save}
+        onClick={(event) => event.stopPropagation()}
+        className="max-h-[min(40rem,calc(100vh-2rem))] w-full max-w-lg overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-5 shadow-xl"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <h3 id={titleId} className="text-lg font-semibold text-neutral-900">
+            Add course
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close add course"
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-lg leading-none text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <div>
+            <label htmlFor="course-number" className="text-xs font-medium text-neutral-500">
+              Course number
+            </label>
+            <input
+              ref={numberRef}
+              id="course-number"
+              required
+              value={draft.courseNumber}
+              onChange={(event) => update("courseNumber", event.target.value)}
+              placeholder="CS 151"
+              className={fieldClassName}
+            />
+          </div>
+          <Field
+            label="Course name"
+            required
+            value={draft.courseName}
+            onChange={(value) => update("courseName", value)}
+          />
+          <Field
+            label="Course days"
+            value={draft.courseDays}
+            onChange={(value) => update("courseDays", value)}
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Field
+              label="Course start"
+              type="time"
+              value={draft.courseStart}
+              onChange={(value) => update("courseStart", value)}
+            />
+            <Field
+              label="Course end"
+              type="time"
+              value={draft.courseEnd}
+              onChange={(value) => update("courseEnd", value)}
+            />
+          </div>
+          <Field
+            label="Office hours days"
+            value={draft.officeHoursDays}
+            onChange={(value) => update("officeHoursDays", value)}
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Field
+              label="Hours start"
+              type="time"
+              value={draft.officeHoursStart}
+              onChange={(value) => update("officeHoursStart", value)}
+            />
+            <Field
+              label="Hours end"
+              type="time"
+              value={draft.officeHoursEnd}
+              onChange={(value) => update("officeHoursEnd", value)}
+            />
+          </div>
+          <Field
+            label="Professor"
+            value={draft.professorName}
+            onChange={(value) => update("professorName", value)}
+          />
+          <Field
+            label="Email"
+            type="email"
+            value={draft.professorEmail}
+            onChange={(value) => update("professorEmail", value)}
+          />
+          <div className="sm:col-span-2">
+            <label htmlFor="prerequisites" className="text-xs font-medium text-neutral-500">
+              Prerequisites
+            </label>
+            <textarea
+              id="prerequisites"
+              value={draft.prerequisites}
+              onChange={(event) => update("prerequisites", event.target.value)}
+              rows={2}
+              className={fieldClassName}
+            />
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <ProgressControls
+            value={draft}
+            onChange={(progress) => setDraft((current) => ({ ...current, ...progress }))}
+          />
+        </div>
+
+        {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-neutral-200 px-3 py-1.5 text-sm font-medium text-neutral-900 hover:bg-neutral-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-60"
+          >
+            {saving ? "Saving" : "Save"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 export function CourseList() {
+  const [courses, setCourses] = useState<UserCourse[]>([]);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
   const returnFocus = useRef<HTMLElement | null>(null);
   const selected = courses.find((course) => course.id === selectedId) ?? null;
+
+  useEffect(() => {
+    let active = true;
+
+    listUserCourses()
+      .then((loaded) => {
+        if (!active) {
+          return;
+        }
+
+        setCourses(loaded);
+        setStatus("ready");
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+
+        setCourses([]);
+        setStatus("error");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const closeCourse = useCallback(() => {
     setSelectedId(null);
     returnFocus.current?.focus();
   }, []);
 
-  function openCourse(course: Course) {
+  const closeAdd = useCallback(() => {
+    setAdding(false);
+    returnFocus.current?.focus();
+  }, []);
+
+  const saveProgress = useCallback((course: UserCourse) => {
+    setCourses((current) =>
+      current.map((item) => (item.id === course.id ? course : item)),
+    );
+  }, []);
+
+  const removeCourse = useCallback((id: string) => {
+    setCourses((current) => current.filter((item) => item.id !== id));
+    setSelectedId(null);
+    returnFocus.current?.focus();
+  }, []);
+
+  const saveAdd = useCallback((course: UserCourse) => {
+    setCourses((current) => [...current, course]);
+    setAdding(false);
+    returnFocus.current?.focus();
+  }, []);
+
+  function openCourse(course: UserCourse) {
     returnFocus.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setSelectedId(course.id);
@@ -267,24 +652,63 @@ export function CourseList() {
   return (
     <section aria-label="Current courses" className="mt-6">
       <h2 className="text-lg font-semibold text-neutral-900">Courses</h2>
-      <ul className="mt-4 flex max-w-3xl flex-col gap-3">
-        {courses.map((course) => (
-          <li key={course.id}>
+      {status === "loading" ? (
+        <p className="mt-4 text-sm text-neutral-500">Loading courses…</p>
+      ) : null}
+      {status === "error" ? (
+        <p className="mt-4 text-sm text-red-700">Couldn't load your courses.</p>
+      ) : null}
+      {status === "ready" ? (
+        <ul className="mt-4 flex max-w-3xl flex-col gap-3">
+          {courses.map((course) => (
+            <li key={course.id}>
+              <button
+                type="button"
+                aria-haspopup="dialog"
+                onClick={() => openCourse(course)}
+                className="flex h-24 w-full items-center gap-6 border border-neutral-200 bg-neutral-50 px-5 text-left shadow-sm hover:border-neutral-300 hover:bg-white"
+              >
+                <p className="w-28 shrink-0 text-sm font-medium text-neutral-500">
+                  {course.courseNumber}
+                </p>
+                <h3 className="text-base font-semibold text-neutral-900">{course.courseName}</h3>
+              </button>
+            </li>
+          ))}
+          <li>
             <button
               type="button"
+              aria-label="Add course"
               aria-haspopup="dialog"
-              onClick={() => openCourse(course)}
-              className="flex h-24 w-full items-center gap-6 border border-neutral-200 bg-neutral-50 px-5 text-left shadow-sm hover:border-neutral-300 hover:bg-white"
+              onClick={() => {
+                returnFocus.current =
+                  document.activeElement instanceof HTMLElement ? document.activeElement : null;
+                setAdding(true);
+              }}
+              className="flex h-24 w-full items-center justify-center border border-neutral-200 bg-neutral-50 text-neutral-900 shadow-sm hover:border-neutral-300 hover:bg-white"
             >
-              <p className="w-28 shrink-0 text-sm font-medium text-neutral-500">
-                {course.courseNumber}
-              </p>
-              <h3 className="text-base font-semibold text-neutral-900">{course.courseName}</h3>
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-6">
+                <path
+                  d="M12 5v14M5 12h14"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
             </button>
           </li>
-        ))}
-      </ul>
-      {selected ? <CourseDetails course={selected} onClose={closeCourse} /> : null}
+        </ul>
+      ) : null}
+      {selected ? (
+        <CourseDetails
+          course={selected}
+          onClose={closeCourse}
+          onProgress={saveProgress}
+          onDelete={removeCourse}
+        />
+      ) : null}
+      {adding ? <AddCourseDialog onClose={closeAdd} onSave={saveAdd} /> : null}
     </section>
   );
 }
