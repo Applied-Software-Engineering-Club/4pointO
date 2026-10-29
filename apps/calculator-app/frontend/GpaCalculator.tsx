@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { addUserCourse } from "@/apps/calculator-app/backend/courses/addUserCourse";
 import { deleteUserCourse } from "@/apps/calculator-app/backend/courses/deleteUserCourse";
 import { updateUserCourses } from "@/apps/calculator-app/backend/courses/updateUserCourses";
@@ -27,7 +27,38 @@ function toGpaCourse(course: DisplayUserCourse): GpaCourse {
 }
 
 function semesterIdFor(course: Pick<DisplayUserCourse, "season" | "year">) {
-  return `${course.season} ${course.year}`;
+  return [course.season, course.year].filter(Boolean).join(" ");
+}
+
+const seasonOrder: Record<string, number> = {
+  Winter: 0,
+  Spring: 1,
+  Summer: 2,
+  Fall: 3,
+};
+
+function termRank(title: string) {
+  const [season, year = ""] = title.split(" ");
+  const yearNumber = /^\d{4}$/.test(year) ? Number(year) : -1;
+  return yearNumber * 10 + (seasonOrder[season] ?? -1);
+}
+
+function coursesByTerm(courses: DisplayUserCourse[]) {
+  const groups = new Map<string, DisplayUserCourse[]>();
+
+  for (const course of courses) {
+    const title = semesterIdFor(course) || "Unscheduled";
+    const group = groups.get(title);
+    if (group) {
+      group.push(course);
+    } else {
+      groups.set(title, [course]);
+    }
+  }
+
+  return [...groups.entries()]
+    .map(([title, termCourses]) => ({ title, courses: termCourses }))
+    .sort((a, b) => termRank(b.title) - termRank(a.title));
 }
 
 const letterGrades = [
@@ -55,7 +86,6 @@ const creditOptions = ["1", "2", "3", "4"];
 const seasons = ["Fall", "Spring", "Summer"];
 const defaultYear = String(new Date().getFullYear());
 
-const columnClassName = "grid grid-cols-5 gap-2 whitespace-nowrap sm:gap-8";
 const controlClassName =
   "cursor-pointer appearance-none justify-self-start border-0 bg-transparent bg-[length:0.65rem] bg-[position:right_center] bg-no-repeat p-0 pr-[0.85rem] font-medium text-inherit outline-none";
 const dropdownArrow = {
@@ -76,6 +106,15 @@ type GpaCalculatorProps = {
 
 function dropdownWidth(label: string) {
   return `calc(${Math.max(label.length, 1)}ch + 0.85rem)`;
+}
+
+function CardField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <p className="text-xs font-medium text-neutral-500">{label}</p>
+      <div className="mt-1 text-sm font-medium text-neutral-900">{children}</div>
+    </div>
+  );
 }
 
 function isYearDraft(value: string) {
@@ -238,9 +277,8 @@ export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
   const displayCourses = courses.map((course) =>
     whatIfEnabled ? { ...course, ...whatIfChanges[course.id] } : course,
   );
-  const semesterId = displayCourses[0]
-    ? semesterIdFor(displayCourses[0])
-    : `Fall ${defaultYear}`;
+  const termSections = coursesByTerm(displayCourses);
+  const semesterId = termSections[0]?.title ?? `Fall ${defaultYear}`;
   const gpaCourses = displayCourses.map(toGpaCourse);
   const semesterResult = calculateSemesterGpa(gpaCourses, semesterId);
   const cgpaResult = calculateCgpa(gpaCourses);
@@ -280,140 +318,156 @@ export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
           </button>
           </div>
         </div>
-        <div className="mt-4 flex items-center gap-2 px-[13px] text-xs text-neutral-500 sm:px-[17px] sm:text-sm">
-          <div className={`${columnClassName} min-w-0 flex-1`}>
-            <span>Course</span>
-            <span>Semester</span>
-            <span>Letter grade</span>
-            <span>Percent grade</span>
-            <span>Credits</span>
-          </div>
-          <span className="size-6 shrink-0" aria-hidden="true" />
-        </div>
-        <ul className="mt-2 flex flex-col gap-3">
-          {courses.map((course) => {
-            const row = whatIfEnabled
-              ? { ...course, ...whatIfChanges[course.id] }
-              : course;
-            const adjusting = editing || whatIfEnabled;
+        <div className="mt-6 flex flex-col gap-8">
+          {termSections.map((section) => (
+            <section key={section.title} aria-label={section.title}>
+              <h2 className="text-sm font-semibold text-neutral-900">
+                {section.title}
+              </h2>
+              <ul className="mt-3 grid grid-cols-3 gap-3">
+                {section.courses.map((course) => {
+                  const adjusting = editing || whatIfEnabled;
 
-            return (
-            <li
-              key={course.id}
-              className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm font-medium text-neutral-900 sm:p-4 sm:text-base"
-            >
-              <div className={`${columnClassName} min-w-0 flex-1`}>
-                <span>{course.courseName}</span>
-                {adjusting ? (
-                  <span className="inline-flex items-center gap-3">
-                    <select
-                      aria-label={`Season for ${course.courseName}`}
-                      value={row.season}
-                      onChange={(event) =>
-                        updateCourse(course.id, "season", event.target.value)
-                      }
-                      className={`${controlClassName} w-fit [field-sizing:content]`}
-                      style={dropdownArrow}
+                  return (
+                    <li
+                      key={course.id}
+                      className="rounded-xl border border-neutral-200 bg-neutral-50 p-4"
                     >
-                      {seasons.map((season) => (
-                        <option key={season} value={season}>
-                          {season}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      aria-label={`Year for ${course.courseName}`}
-                      inputMode="numeric"
-                      value={row.year}
-                      onChange={(event) =>
-                        updateCourse(course.id, "year", event.target.value)
-                      }
-                      placeholder="Year"
-                      style={{ width: "4ch" }}
-                      className="bg-transparent p-0 font-medium text-inherit outline-none placeholder:text-neutral-400"
-                    />
-                  </span>
-                ) : (
-                  <span>{[row.season, row.year].filter(Boolean).join(" ") || "—"}</span>
-                )}
-                {adjusting ? (
-                  <select
-                    aria-label={`Letter grade for ${course.courseName}`}
-                    value={row.letterGrade}
-                    onChange={(event) =>
-                      updateCourse(course.id, "letterGrade", event.target.value)
-                    }
-                    className={controlClassName}
-                    style={{
-                      ...dropdownArrow,
-                      width: dropdownWidth(row.letterGrade || "—"),
-                    }}
-                  >
-                    <option value="">—</option>
-                    {letterGrades.map((grade) => (
-                      <option key={grade} value={grade}>
-                        {grade}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <span>{row.letterGrade || "—"}</span>
-                )}
-                {adjusting ? (
-                  <span className="inline-flex items-center">
-                    <input
-                      aria-label={`Percent grade for ${course.courseName}`}
-                      inputMode="decimal"
-                      value={row.percentGrade}
-                      onChange={(event) =>
-                        updateCourse(course.id, "percentGrade", event.target.value)
-                      }
-                      placeholder="—"
-                      style={{ width: `${Math.max(row.percentGrade.length, 1)}ch` }}
-                      className="bg-transparent p-0 font-medium text-inherit outline-none placeholder:text-neutral-900"
-                    />
-                    {row.percentGrade ? "%" : null}
-                  </span>
-                ) : (
-                  <span>{row.percentGrade ? `${row.percentGrade}%` : "—"}</span>
-                )}
-                {editing && !whatIfEnabled ? (
-                  <select
-                    aria-label={`Credits for ${course.courseName}`}
-                    value={course.credits}
-                    onChange={(event) =>
-                      updateCredits(course.id, event.target.value)
-                    }
-                    className={controlClassName}
-                    style={{
-                      ...dropdownArrow,
-                      width: dropdownWidth(course.credits || "—"),
-                    }}
-                  >
-                    <option value="">—</option>
-                    {creditOptions.map((credit) => (
-                      <option key={credit} value={credit}>
-                        {credit}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <span>{course.credits || "—"}</span>
-                )}
-              </div>
-              <button
-                type="button"
-                aria-label={`Remove ${course.courseName}`}
-                disabled={deletingId === course.id}
-                onClick={() => removeCourse(course.id)}
-                className="inline-flex size-6 shrink-0 items-center justify-center text-lg leading-none font-semibold text-red-600 hover:text-red-700 disabled:opacity-60"
-              >
-                ×
-              </button>
-            </li>
-            );
-          })}
-        </ul>
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className="text-base font-semibold text-neutral-900">
+                          {course.courseName}
+                        </h3>
+                        <button
+                          type="button"
+                          aria-label={`Remove ${course.courseName}`}
+                          disabled={deletingId === course.id}
+                          onClick={() => removeCourse(course.id)}
+                          className="inline-flex size-6 shrink-0 items-center justify-center text-lg leading-none font-semibold text-red-600 hover:text-red-700 disabled:opacity-60"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-3">
+                        <CardField label="Semester">
+                          {adjusting ? (
+                            <span className="inline-flex items-center gap-2">
+                              <select
+                                aria-label={`Season for ${course.courseName}`}
+                                value={course.season}
+                                onChange={(event) =>
+                                  updateCourse(course.id, "season", event.target.value)
+                                }
+                                className={`${controlClassName} w-fit [field-sizing:content]`}
+                                style={dropdownArrow}
+                              >
+                                {seasons.map((season) => (
+                                  <option key={season} value={season}>
+                                    {season}
+                                  </option>
+                                ))}
+                              </select>
+                              <input
+                                aria-label={`Year for ${course.courseName}`}
+                                inputMode="numeric"
+                                value={course.year}
+                                onChange={(event) =>
+                                  updateCourse(course.id, "year", event.target.value)
+                                }
+                                placeholder="Year"
+                                style={{ width: "4ch" }}
+                                className="bg-transparent p-0 font-medium text-inherit outline-none placeholder:text-neutral-400"
+                              />
+                            </span>
+                          ) : (
+                            semesterIdFor(course) || "—"
+                          )}
+                        </CardField>
+                        <CardField label="Letter grade">
+                          {adjusting ? (
+                            <select
+                              aria-label={`Letter grade for ${course.courseName}`}
+                              value={course.letterGrade}
+                              onChange={(event) =>
+                                updateCourse(course.id, "letterGrade", event.target.value)
+                              }
+                              className={controlClassName}
+                              style={{
+                                ...dropdownArrow,
+                                width: dropdownWidth(course.letterGrade || "—"),
+                              }}
+                            >
+                              <option value="">—</option>
+                              {letterGrades.map((grade) => (
+                                <option key={grade} value={grade}>
+                                  {grade}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            course.letterGrade || "—"
+                          )}
+                        </CardField>
+                        <CardField label="Percent grade">
+                          {adjusting ? (
+                            <span className="inline-flex items-center">
+                              <input
+                                aria-label={`Percent grade for ${course.courseName}`}
+                                inputMode="decimal"
+                                value={course.percentGrade}
+                                onChange={(event) =>
+                                  updateCourse(
+                                    course.id,
+                                    "percentGrade",
+                                    event.target.value,
+                                  )
+                                }
+                                placeholder="—"
+                                style={{
+                                  width: `${Math.max(course.percentGrade.length, 1)}ch`,
+                                }}
+                                className="bg-transparent p-0 font-medium text-inherit outline-none placeholder:text-neutral-400"
+                              />
+                              {course.percentGrade ? "%" : null}
+                            </span>
+                          ) : course.percentGrade ? (
+                            `${course.percentGrade}%`
+                          ) : (
+                            "—"
+                          )}
+                        </CardField>
+                        <CardField label="Credits">
+                          {editing && !whatIfEnabled ? (
+                            <select
+                              aria-label={`Credits for ${course.courseName}`}
+                              value={course.credits}
+                              onChange={(event) =>
+                                updateCredits(course.id, event.target.value)
+                              }
+                              className={controlClassName}
+                              style={{
+                                ...dropdownArrow,
+                                width: dropdownWidth(course.credits || "—"),
+                              }}
+                            >
+                              <option value="">—</option>
+                              {creditOptions.map((credit) => (
+                                <option key={credit} value={credit}>
+                                  {credit}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            course.credits || "—"
+                          )}
+                        </CardField>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
         {saveError ? (
           <p className="mt-3 text-sm text-red-600">{saveError}</p>
         ) : null}
