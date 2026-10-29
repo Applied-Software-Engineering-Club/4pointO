@@ -23,6 +23,14 @@ import withDragAndDrop, {
 } from "react-big-calendar/lib/addons/dragAndDrop";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
+import { addScheduleEvent } from "@/apps/syllabus-tracker/backend/schedule/addScheduleEvent";
+import { deleteScheduleEvent } from "@/apps/syllabus-tracker/backend/schedule/deleteScheduleEvent";
+import { listScheduleEvents } from "@/apps/syllabus-tracker/backend/schedule/listScheduleEvents";
+import {
+  scheduleColors,
+  type ScheduleEvent,
+} from "@/apps/syllabus-tracker/backend/schedule/scheduleEvent";
+import { updateScheduleEvent } from "@/apps/syllabus-tracker/backend/schedule/updateScheduleEvent";
 import "./calendar.css";
 
 const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -41,18 +49,10 @@ const snapMinutes = 15;
 const defaultDuration = 60;
 const scheduleStart = startHour * 60;
 const scheduleEnd = endHour * 60;
-const storageKey = "4pointo-weekly-schedule";
 const fixedWeekStart = new Date(2026, 0, 4);
 const dayStart = new Date(2026, 0, 4, startHour, 0, 0);
 const dayEnd = new Date(2026, 0, 4, endHour, 0, 0);
-const colors = [
-  { name: "Blue", value: "#1d4ed8" },
-  { name: "Green", value: "#047857" },
-  { name: "Amber", value: "#b45309" },
-  { name: "Purple", value: "#6d28d9" },
-  { name: "Rose", value: "#be123c" },
-  { name: "Teal", value: "#0f766e" },
-];
+const colors = scheduleColors;
 const timeOptions = Array.from(
   { length: (scheduleEnd - scheduleStart) / snapMinutes },
   (_, index) => scheduleStart + index * snapMinutes,
@@ -65,15 +65,6 @@ const localizer = dateFnsLocalizer({
   getDay,
   locales: { "en-US": enUS },
 });
-
-type ScheduleEvent = {
-  id: string;
-  title: string;
-  day: number;
-  start: number;
-  end: number;
-  color: string;
-};
 
 type CalendarEvent = {
   id: string;
@@ -160,43 +151,6 @@ function asDate(value: Date | string) {
   return value instanceof Date ? value : new Date(value);
 }
 
-function isScheduleEvent(value: unknown): value is ScheduleEvent {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-
-  const event = value as Partial<ScheduleEvent>;
-  return (
-    typeof event.id === "string" &&
-    typeof event.title === "string" &&
-    typeof event.day === "number" &&
-    Number.isInteger(event.day) &&
-    event.day >= 0 &&
-    event.day < 7 &&
-    typeof event.start === "number" &&
-    typeof event.end === "number" &&
-    event.start >= scheduleStart &&
-    event.end <= scheduleEnd &&
-    event.end > event.start &&
-    typeof event.color === "string" &&
-    colors.some((color) => color.value === event.color)
-  );
-}
-
-function readEvents(): ScheduleEvent[] {
-  try {
-    const raw = localStorage.getItem(storageKey);
-    if (!raw) {
-      return [];
-    }
-
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(isScheduleEvent) : [];
-  } catch {
-    return [];
-  }
-}
-
 function placePopover(clientX: number, clientY: number) {
   const width = 288;
   const height = 292;
@@ -225,21 +179,35 @@ function WeekdayHeader({ date }: HeaderProps) {
 export function Calendar() {
   const [events, setEvents] = useState<ScheduleEvent[] | null>(null);
   const [editor, setEditor] = useState<EditorState | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const popoverRef = useRef<HTMLFormElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
+  const savingRef = useRef(false);
   const titleId = useId();
 
   useEffect(() => {
-    setEvents(readEvents());
+    let active = true;
+
+    listScheduleEvents()
+      .then((loaded) => {
+        if (active) {
+          setEvents(loaded);
+        }
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+
+        setEvents([]);
+        setLoadError("Couldn't load your schedule.");
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
-
-  useEffect(() => {
-    if (events === null) {
-      return;
-    }
-
-    localStorage.setItem(storageKey, JSON.stringify(events));
-  }, [events]);
 
   useEffect(() => {
     titleRef.current?.focus();
@@ -278,6 +246,7 @@ export function Calendar() {
   }, [editor]);
 
   function openEditor(range: StoredRange, point: { top: number; left: number }, existing?: ScheduleEvent) {
+    setSaveError(null);
     setEditor({
       session: Date.now(),
       id: existing?.id ?? "",
@@ -341,10 +310,22 @@ export function Calendar() {
       return;
     }
 
+    const previous = (events ?? []).find((item) => item.id === event.id);
+    if (!previous) {
+      return;
+    }
+
+    const next = { ...previous, ...range };
     setEvents((current) =>
-      (current ?? []).map((item) => (item.id === event.id ? { ...item, ...range } : item)),
+      (current ?? []).map((item) => (item.id === event.id ? next : item)),
     );
     setEditor((current) => (current?.id === event.id ? { ...current, ...range } : current));
+    updateScheduleEvent(next).catch(() => {
+      setEvents((current) =>
+        (current ?? []).map((item) => (item.id === previous.id ? previous : item)),
+      );
+      setLoadError("Couldn't save this event.");
+    });
   }
 
   function onAddClick(event: ReactMouseEvent<HTMLButtonElement>) {
@@ -355,35 +336,64 @@ export function Calendar() {
     );
   }
 
-  function saveEditor(event: FormEvent<HTMLFormElement>) {
+  async function saveEditor(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!editor) {
+    if (!editor || savingRef.current) {
       return;
     }
 
-    const saved: ScheduleEvent = {
-      id: editor.id || crypto.randomUUID(),
+    const input = {
       title: editor.title.trim() || "Untitled",
       day: editor.day,
       start: editor.start,
       end: editor.end,
       color: editor.color,
     };
+    const editorId = editor.id;
+    savingRef.current = true;
+    setSaveError(null);
 
-    setEvents((current) => {
-      const list = current ?? [];
-      return editor.id
-        ? list.map((item) => (item.id === editor.id ? saved : item))
-        : [...list, saved];
-    });
-    setEditor(null);
+    try {
+      const saved = editorId
+        ? await updateScheduleEvent({ id: editorId, ...input })
+        : await addScheduleEvent(input);
+      setEvents((current) => {
+        const list = current ?? [];
+        return editorId
+          ? list.map((item) => (item.id === saved.id ? saved : item))
+          : [...list, saved];
+      });
+      setEditor(null);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Couldn't save this event.");
+    } finally {
+      savingRef.current = false;
+    }
   }
 
-  function deleteEditor() {
-    if (editor?.id) {
-      setEvents((current) => (current ?? []).filter((item) => item.id !== editor.id));
+  async function deleteEditor() {
+    if (!editor?.id) {
+      setEditor(null);
+      return;
     }
-    setEditor(null);
+
+    if (savingRef.current) {
+      return;
+    }
+
+    const eventId = editor.id;
+    savingRef.current = true;
+    setSaveError(null);
+
+    try {
+      await deleteScheduleEvent(eventId);
+      setEvents((current) => (current ?? []).filter((item) => item.id !== eventId));
+      setEditor(null);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Couldn't remove this event.");
+    } finally {
+      savingRef.current = false;
+    }
   }
 
   const calendarEvents = useMemo(() => {
@@ -417,6 +427,7 @@ export function Calendar() {
           Add event
         </button>
       </div>
+      {loadError ? <p className="-mt-2 mb-4 text-sm text-red-700">{loadError}</p> : null}
       <div className="overflow-x-auto rounded-2xl border border-neutral-200 shadow-sm">
         <ScheduleCalendar
           className="weekly-schedule"
@@ -540,6 +551,7 @@ export function Calendar() {
               })}
             </div>
           </div>
+          {saveError ? <p className="mt-3 text-sm text-red-700">{saveError}</p> : null}
           <div className="mt-3 flex items-center justify-between gap-2">
             {editor.id ? (
               <button
