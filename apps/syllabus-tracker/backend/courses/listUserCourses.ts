@@ -1,28 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { userCourseFromRow, type UserCourse } from "./userCourse";
-
-const columns = [
-  "id",
-  "course_number",
-  "course_name",
-  "course_days",
-  "course_start",
-  "course_end",
-  "office_hours_days",
-  "office_hours_start",
-  "office_hours_end",
-  "professor_name",
-  "professor_email",
-  "prerequisites",
-  "homework_completed",
-  "homework_total",
-  "exams_completed",
-  "exams_total",
-  "projects_completed",
-  "projects_total",
-].join(", ");
+import { userCourseColumns, userCourseFromRow, type UserCourse } from "./userCourse";
 
 export async function listUserCourses(): Promise<UserCourse[]> {
   const supabase = await createClient();
@@ -33,7 +12,7 @@ export async function listUserCourses(): Promise<UserCourse[]> {
 
   const { data, error } = await supabase
     .from("user-courses")
-    .select(columns)
+    .select(userCourseColumns)
     .eq("user_id", auth.user.id)
     .order("created_at");
 
