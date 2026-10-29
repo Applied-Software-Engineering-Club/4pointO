@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { addUserCourse } from "@/apps/syllabus-tracker/backend/courses/addUserCourse";
+import { deleteUserCourse } from "@/apps/syllabus-tracker/backend/courses/deleteUserCourse";
 import { listUserCourses } from "@/apps/syllabus-tracker/backend/courses/listUserCourses";
 import { updateCourseProgress } from "@/apps/syllabus-tracker/backend/courses/updateCourseProgress";
 import {
@@ -174,10 +175,12 @@ function CourseDetails({
   course,
   onClose,
   onProgress,
+  onDelete,
 }: {
   course: UserCourse;
   onClose: () => void;
   onProgress: (course: UserCourse) => void;
+  onDelete: (id: string) => void;
 }) {
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -190,6 +193,7 @@ function CourseDetails({
   const [progress, setProgress] = useState<CourseProgress>(() => progressOf(course));
   const [progressError, setProgressError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const savingRef = useRef(false);
 
   async function saveProgress() {
@@ -208,6 +212,25 @@ function CourseDetails({
     } finally {
       savingRef.current = false;
       setSaving(false);
+    }
+  }
+
+  async function removeCourse() {
+    if (savingRef.current) {
+      return;
+    }
+
+    savingRef.current = true;
+    setDeleting(true);
+    setProgressError(null);
+
+    try {
+      await deleteUserCourse(course.id);
+      onDelete(course.id);
+    } catch (caught) {
+      setProgressError(caught instanceof Error ? caught.message : "Couldn't remove this course.");
+      savingRef.current = false;
+      setDeleting(false);
     }
   }
 
@@ -283,11 +306,19 @@ function CourseDetails({
         <div className="mt-6">
           <ProgressControls value={progress} onChange={setProgress} />
           {progressError ? <p className="mt-3 text-sm text-red-700">{progressError}</p> : null}
-          <div className="mt-4 flex justify-end">
+          <div className="mt-4 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => void removeCourse()}
+              disabled={saving || deleting}
+              className="rounded-lg px-2 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-60"
+            >
+              {deleting ? "Deleting" : "Delete"}
+            </button>
             <button
               type="button"
               onClick={() => void saveProgress()}
-              disabled={saving}
+              disabled={saving || deleting}
               className="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-60"
             >
               {saving ? "Saving" : "Save"}
@@ -600,6 +631,12 @@ export function CourseList() {
     );
   }, []);
 
+  const removeCourse = useCallback((id: string) => {
+    setCourses((current) => current.filter((item) => item.id !== id));
+    setSelectedId(null);
+    returnFocus.current?.focus();
+  }, []);
+
   const saveAdd = useCallback((course: UserCourse) => {
     setCourses((current) => [...current, course]);
     setAdding(false);
@@ -664,7 +701,12 @@ export function CourseList() {
         </ul>
       ) : null}
       {selected ? (
-        <CourseDetails course={selected} onClose={closeCourse} onProgress={saveProgress} />
+        <CourseDetails
+          course={selected}
+          onClose={closeCourse}
+          onProgress={saveProgress}
+          onDelete={removeCourse}
+        />
       ) : null}
       {adding ? <AddCourseDialog onClose={closeAdd} onSave={saveAdd} /> : null}
     </section>
