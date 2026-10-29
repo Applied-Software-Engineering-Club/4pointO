@@ -1,0 +1,68 @@
+.weekly-schedule.rbc-calendar {
+  min-width: 760px;
+  font-family: inherit;
+}
+
+.weekly-schedule .rbc-time-view {
+  border: none;
+}
+
+.weekly-schedule .rbc-header {
+  padding: 12px 0;
+  border-color: #e5e5e5;
+  background: #fafafa;
+  color: #737373;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.weekly-schedule .rbc-header + .rbc-header,
+.weekly-schedule .rbc-time-content,
+.weekly-schedule .rbc-time-content > * + * > *,
+.weekly-schedule .rbc-time-header-content,
+.weekly-schedule .rbc-timeslot-group,
+.weekly-schedule .rbc-day-bg + .rbc-day-bg,
+.weekly-schedule .rbc-time-header.rbc-overflowing {
+  border-color: #e5e5e5;
+}
+
+.weekly-schedule .rbc-allday-cell {
+  display: none;
+}
+
+.weekly-schedule .rbc-day-slot .rbc-time-slot {
+  border-top: none;
+}
+
+.weekly-schedule .rbc-time-gutter .rbc-timeslot-group {
+  color: #a3a3a3;
+  font-size: 11px;
+}
+
+.weekly-schedule .rbc-today {
+  background: transparent;
+}
+
+.weekly-schedule .rbc-current-time-indicator {
+  display: none;
+}
+
+.weekly-schedule .rbc-slot-selection {
+  background-color: rgba(23, 23, 23, 0.16);
+  color: #171717;
+}
+
+.weekly-schedule .rbc-event {
+  padding: 2px 6px;
+  font-size: 12px;
+}
+
+.weekly-schedule .rbc-event-label {
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.weekly-schedule .rbc-event:focus {
+  outline: 2px solid #171717;
+  outline-offset: 1px;
+}
