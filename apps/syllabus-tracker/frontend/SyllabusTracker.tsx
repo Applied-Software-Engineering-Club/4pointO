@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Calendar } from "./Calendar";
+import { CourseList } from "./CourseList";
 
 const tabs = ["Main", "Calendar"] as const;
 
@@ -43,7 +44,9 @@ export function SyllabusTracker() {
           <Calendar />
         </div>
       ) : (
-        <div role="tabpanel" aria-label="Main" />
+        <div role="tabpanel" aria-label="Main">
+          <CourseList />
+        </div>
       )}
     </main>
   );
