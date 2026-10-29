@@ -1,90 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-
-type Course = {
-  id: string;
-  courseNumber: string;
-  courseName: string;
-  courseDays: string;
-  courseStart: string;
-  courseEnd: string;
-  officeHoursDays: string;
-  officeHoursStart: string;
-  officeHoursEnd: string;
-  professorName: string;
-  professorEmail: string;
-  prerequisites: string;
-  homeworkCompleted: number;
-  homeworkTotal: number;
-  examsCompleted: number;
-  examsTotal: number;
-  projectsCompleted: number;
-  projectsTotal: number;
-};
-
-const courses: Course[] = [
-  {
-    id: "cs-151",
-    courseNumber: "CS 151",
-    courseName: "Object Oriented Programming",
-    courseDays: "TuTh",
-    courseStart: "13:30",
-    courseEnd: "14:30",
-    officeHoursDays: "W",
-    officeHoursStart: "15:00",
-    officeHoursEnd: "16:00",
-    professorName: "Ada Lovelace",
-    professorEmail: "ada.lovelace@sjsu.edu",
-    prerequisites: "CS 46B, MATH 42",
-    homeworkCompleted: 4,
-    homeworkTotal: 5,
-    examsCompleted: 1,
-    examsTotal: 2,
-    projectsCompleted: 1,
-    projectsTotal: 3,
-  },
-  {
-    id: "cs-146",
-    courseNumber: "CS 146",
-    courseName: "Data Structures and Algorithms",
-    courseDays: "MW",
-    courseStart: "09:00",
-    courseEnd: "10:15",
-    officeHoursDays: "M",
-    officeHoursStart: "14:00",
-    officeHoursEnd: "15:30",
-    professorName: "Grace Hopper",
-    professorEmail: "grace.hopper@sjsu.edu",
-    prerequisites: "CS 46B, MATH 30",
-    homeworkCompleted: 6,
-    homeworkTotal: 8,
-    examsCompleted: 0,
-    examsTotal: 2,
-    projectsCompleted: 2,
-    projectsTotal: 2,
-  },
-  {
-    id: "math-161a",
-    courseNumber: "MATH 161A",
-    courseName: "Applied Probability and Statistics",
-    courseDays: "MWF",
-    courseStart: "11:00",
-    courseEnd: "11:50",
-    officeHoursDays: "F",
-    officeHoursStart: "12:00",
-    officeHoursEnd: "13:00",
-    professorName: "Katherine Johnson",
-    professorEmail: "katherine.johnson@sjsu.edu",
-    prerequisites: "MATH 31",
-    homeworkCompleted: 3,
-    homeworkTotal: 10,
-    examsCompleted: 1,
-    examsTotal: 3,
-    projectsCompleted: 0,
-    projectsTotal: 1,
-  },
-];
+import { listUserCourses } from "@/apps/syllabus-tracker/backend/courses/listUserCourses";
+import type { UserCourse } from "@/apps/syllabus-tracker/backend/courses/userCourse";
 
 type Progress = {
   label: string;
@@ -136,7 +54,7 @@ function Detail({ label, value }: { label: string; value: string }) {
   );
 }
 
-function CourseDetails({ course, onClose }: { course: Course; onClose: () => void }) {
+function CourseDetails({ course, onClose }: { course: UserCourse; onClose: () => void }) {
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
   const courseTime = formatWindow(course.courseDays, course.courseStart, course.courseEnd);
@@ -249,16 +167,44 @@ function CourseDetails({ course, onClose }: { course: Course; onClose: () => voi
 }
 
 export function CourseList() {
+  const [courses, setCourses] = useState<UserCourse[]>([]);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
   const selected = courses.find((course) => course.id === selectedId) ?? null;
+
+  useEffect(() => {
+    let active = true;
+
+    listUserCourses()
+      .then((loaded) => {
+        if (!active) {
+          return;
+        }
+
+        setCourses(loaded);
+        setStatus("ready");
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+
+        setCourses([]);
+        setStatus("error");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const closeCourse = useCallback(() => {
     setSelectedId(null);
     returnFocus.current?.focus();
   }, []);
 
-  function openCourse(course: Course) {
+  function openCourse(course: UserCourse) {
     returnFocus.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setSelectedId(course.id);
@@ -267,23 +213,34 @@ export function CourseList() {
   return (
     <section aria-label="Current courses" className="mt-6">
       <h2 className="text-lg font-semibold text-neutral-900">Courses</h2>
-      <ul className="mt-4 flex max-w-3xl flex-col gap-3">
-        {courses.map((course) => (
-          <li key={course.id}>
-            <button
-              type="button"
-              aria-haspopup="dialog"
-              onClick={() => openCourse(course)}
-              className="flex h-24 w-full items-center gap-6 border border-neutral-200 bg-neutral-50 px-5 text-left shadow-sm hover:border-neutral-300 hover:bg-white"
-            >
-              <p className="w-28 shrink-0 text-sm font-medium text-neutral-500">
-                {course.courseNumber}
-              </p>
-              <h3 className="text-base font-semibold text-neutral-900">{course.courseName}</h3>
-            </button>
-          </li>
-        ))}
-      </ul>
+      {status === "loading" ? (
+        <p className="mt-4 text-sm text-neutral-500">Loading courses…</p>
+      ) : null}
+      {status === "error" ? (
+        <p className="mt-4 text-sm text-red-700">Couldn't load your courses.</p>
+      ) : null}
+      {status === "ready" && courses.length === 0 ? (
+        <p className="mt-4 text-sm text-neutral-500">No courses yet.</p>
+      ) : null}
+      {status === "ready" && courses.length > 0 ? (
+        <ul className="mt-4 flex max-w-3xl flex-col gap-3">
+          {courses.map((course) => (
+            <li key={course.id}>
+              <button
+                type="button"
+                aria-haspopup="dialog"
+                onClick={() => openCourse(course)}
+                className="flex h-24 w-full items-center gap-6 border border-neutral-200 bg-neutral-50 px-5 text-left shadow-sm hover:border-neutral-300 hover:bg-white"
+              >
+                <p className="w-28 shrink-0 text-sm font-medium text-neutral-500">
+                  {course.courseNumber}
+                </p>
+                <h3 className="text-base font-semibold text-neutral-900">{course.courseName}</h3>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {selected ? <CourseDetails course={selected} onClose={closeCourse} /> : null}
     </section>
   );
