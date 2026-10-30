@@ -49,6 +49,37 @@ function ProgressBar({ label, completed, total }: Progress) {
   );
 }
 
+function MiniProgress({ course }: { course: CourseProgress }) {
+  const completed = course.homeworkCompleted + course.examsCompleted + course.projectsCompleted;
+  const total = course.homeworkTotal + course.examsTotal + course.projectsTotal;
+
+  if (total === 0) {
+    return (
+      <span className="ml-auto shrink-0 text-xs text-neutral-500">No progress yet</span>
+    );
+  }
+
+  const percent = Math.round((completed / total) * 100);
+
+  return (
+    <span className="ml-auto block w-24 shrink-0 sm:w-32">
+      <span className="block text-right text-xs text-neutral-500">
+        <span className="sr-only">Progress: </span>
+        {completed} / {total}
+      </span>
+      <span
+        aria-hidden="true"
+        className="mt-1 block h-1.5 overflow-hidden rounded-full bg-neutral-200"
+      >
+        <span
+          className="block h-full rounded-full bg-neutral-900"
+          style={{ width: `${percent}%` }}
+        />
+      </span>
+    </span>
+  );
+}
+
 function Detail({ label, value }: { label: string; value: string }) {
   if (!value) {
     return null;
@@ -672,6 +703,7 @@ export function CourseList() {
                   {course.courseNumber}
                 </p>
                 <h3 className="text-base font-semibold text-neutral-900">{course.courseName}</h3>
+                <MiniProgress course={course} />
               </button>
             </li>
           ))}
