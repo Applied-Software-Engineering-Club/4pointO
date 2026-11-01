@@ -1,5 +1,5 @@
-import { GradeCalc } from "@/apps/grade-calc/frontend";
+import { redirect } from "next/navigation";
 
 export default function GradeCalcPage() {
-  return <GradeCalc />;
+  redirect("/syllabus-tracker");
 }

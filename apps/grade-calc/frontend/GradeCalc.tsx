@@ -759,9 +759,9 @@ function CourseCard({ course }: { course: (typeof courses)[number] }) {
   );
 }
 
-export function GradeCalc() {
-  return (
-    <main className="flex-1 bg-white px-6 py-6">
+export function GradeCalc({ embedded = false }: { embedded?: boolean }) {
+  const body = (
+    <>
       <h1 className="mb-4 text-xl font-semibold text-neutral-900">
         Course Grade Calculator
       </h1>
@@ -771,6 +771,12 @@ export function GradeCalc() {
           <CourseCard key={course.id} course={course} />
         ))}
       </div>
-    </main>
+    </>
   );
+
+  if (embedded) {
+    return <div className="mt-6">{body}</div>;
+  }
+
+  return <main className="flex-1 bg-white px-6 py-6">{body}</main>;
 }
