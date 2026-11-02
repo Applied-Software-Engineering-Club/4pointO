@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { GradeCalc } from "@/apps/grade-calc/frontend";
 import { Calendar } from "./Calendar";
 import { CourseList } from "./CourseList";
 
-const tabs = ["Main", "Calendar"] as const;
+const tabs = ["Main", "Calendar", "Grade Calc"] as const;
 
 type Tab = (typeof tabs)[number];
 
@@ -42,6 +43,10 @@ export function SyllabusTracker() {
       {tab === "Calendar" ? (
         <div role="tabpanel" aria-label="Calendar">
           <Calendar />
+        </div>
+      ) : tab === "Grade Calc" ? (
+        <div role="tabpanel" aria-label="Grade Calc">
+          <GradeCalc embedded />
         </div>
       ) : (
         <div role="tabpanel" aria-label="Main">
