@@ -1,6 +1,9 @@
 "use client";
 
-import { useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { addUserCourse } from "@/apps/syllabus-tracker/backend/courses/addUserCourse";
+import { listUserCourses } from "@/apps/syllabus-tracker/backend/courses/listUserCourses";
+import type { UserCourse, UserCourseDraft } from "@/apps/syllabus-tracker/backend/courses/userCourse";
 
 type Category = { id: string; name: string; weight: number };
 type Assignment = {
@@ -12,10 +15,27 @@ type Assignment = {
   hypothetical?: boolean;
 };
 
-const courses = [
-  { id: "cmpe-172", name: "CMPE 172", title: "Enterprise Software" },
-  { id: "cs-146", name: "CS 146", title: "Data Structures and Algorithms" },
-];
+type GradeCourse = Pick<UserCourse, "id" | "courseNumber" | "courseName">;
+
+const emptyCourseDraft: UserCourseDraft = {
+  courseNumber: "",
+  courseName: "",
+  courseDays: "",
+  courseStart: "",
+  courseEnd: "",
+  officeHoursDays: "",
+  officeHoursStart: "",
+  officeHoursEnd: "",
+  professorName: "",
+  professorEmail: "",
+  prerequisites: "",
+  homeworkCompleted: 0,
+  homeworkTotal: 0,
+  examsCompleted: 0,
+  examsTotal: 0,
+  projectsCompleted: 0,
+  projectsTotal: 0,
+};
 
 const inputClass =
   "w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900";
@@ -613,7 +633,74 @@ function WeightsPanel({
   );
 }
 
-function CourseCard({ course }: { course: (typeof courses)[number] }) {
+function AddCourseForm({ onAdd }: { onAdd: (course: UserCourse) => void }) {
+  const [courseNumber, setCourseNumber] = useState("");
+  const [courseName, setCourseName] = useState("");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (saving) return;
+
+    const number = courseNumber.trim();
+    const name = courseName.trim();
+    if (!number || !name) {
+      setError("Enter a course number and name.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+
+    try {
+      onAdd(
+        await addUserCourse({
+          ...emptyCourseDraft,
+          courseNumber: number,
+          courseName: name,
+        }),
+      );
+      setCourseNumber("");
+      setCourseName("");
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "Couldn't save this course.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+      <div className="flex flex-wrap gap-2">
+        <input
+          type="text"
+          placeholder="Course number"
+          aria-label="Course number"
+          value={courseNumber}
+          onChange={(e) => setCourseNumber(e.target.value)}
+          className={`${inputClass} w-36`}
+        />
+        <input
+          type="text"
+          placeholder="Course name"
+          aria-label="Course name"
+          value={courseName}
+          onChange={(e) => setCourseName(e.target.value)}
+          className={`${inputClass} min-w-48 flex-1`}
+        />
+        <button type="submit" disabled={saving} className={buttonClass}>
+          {saving ? "Adding" : "Add course"}
+        </button>
+      </div>
+      <ErrorText message={error} />
+    </form>
+  );
+}
+
+function CourseCard({ course }: { course: GradeCourse }) {
   const [isOpen, setIsOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -645,9 +732,11 @@ function CourseCard({ course }: { course: (typeof courses)[number] }) {
       >
         <span>
           <span className="text-base font-medium text-neutral-900">
-            {course.name}
+            {course.courseNumber}
           </span>
-          <span className="ml-2 text-sm text-neutral-500">{course.title}</span>
+          <span className="ml-2 text-sm text-neutral-500">
+            {course.courseName}
+          </span>
         </span>
         <span className="flex items-center gap-3 text-neutral-500">
           {shownGrade === null ? null : (
@@ -760,6 +849,29 @@ function CourseCard({ course }: { course: (typeof courses)[number] }) {
 }
 
 export function GradeCalc({ embedded = false }: { embedded?: boolean }) {
+  const [courses, setCourses] = useState<UserCourse[]>([]);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+
+  useEffect(() => {
+    let active = true;
+
+    listUserCourses()
+      .then((loaded) => {
+        if (!active) return;
+        setCourses(loaded);
+        setStatus("ready");
+      })
+      .catch(() => {
+        if (!active) return;
+        setCourses([]);
+        setStatus("error");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const body = (
     <>
       <h1 className="mb-4 text-xl font-semibold text-neutral-900">
@@ -767,9 +879,27 @@ export function GradeCalc({ embedded = false }: { embedded?: boolean }) {
       </h1>
 
       <div className="flex max-w-4xl flex-col gap-3">
-        {courses.map((course) => (
-          <CourseCard key={course.id} course={course} />
-        ))}
+        {status === "loading" ? (
+          <p className="text-sm text-neutral-500">Loading courses…</p>
+        ) : null}
+        {status === "error" ? (
+          <p className="text-sm text-red-700">Couldn't load your courses.</p>
+        ) : null}
+        {status === "ready" && courses.length === 0 ? (
+          <p className="text-sm text-neutral-500">
+            Add a course to start calculating grades.
+          </p>
+        ) : null}
+        {status === "ready"
+          ? courses.map((course) => (
+              <CourseCard key={course.id} course={course} />
+            ))
+          : null}
+        {status === "ready" ? (
+          <AddCourseForm
+            onAdd={(course) => setCourses((current) => [...current, course])}
+          />
+        ) : null}
       </div>
     </>
   );
