@@ -32,6 +32,10 @@ export async function createClient() {
 }
 
 export async function getAuthUser() {
+  if (!getSupabaseEnv()) {
+    return null;
+  }
+
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
   return data.user;
