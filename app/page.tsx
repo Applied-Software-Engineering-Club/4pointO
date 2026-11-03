@@ -1,13 +1,12 @@
-import { Widget } from "@/components/Widget";
+import { Dashboard } from "@/components/dashboard/Dashboard";
+import { loadDashboard } from "@/components/dashboard/load";
+import { isLocalPreview } from "@/utils/preview";
+import { demoDashboard } from "@/utils/demo/fixtures";
 
-export default function Home() {
-  return (
-    <main className="flex-1 bg-white px-6 py-6">
-      <div className="flex flex-wrap gap-4">
-        <Widget name="GPA Calc" href="/gpa-calc" />
-        <Widget name="Example" href="/example" />
-        <Widget name="Syllabus Tracker" href="/syllabus-tracker" />
-      </div>
-    </main>
-  );
+export default async function Home({ searchParams }: PageProps<"/">) {
+  const params = await searchParams;
+  const view = params.view === "academic" || params.view === "personal" ? params.view : "overview";
+  const preview = isLocalPreview();
+  const data = preview ? demoDashboard : await loadDashboard();
+  return <Dashboard key={view} data={data} preview={preview} view={view} />;
 }

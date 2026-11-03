@@ -9,8 +9,8 @@ const tabs = ["Main", "Calendar", "Grade Calc"] as const;
 
 type Tab = (typeof tabs)[number];
 
-export function SyllabusTracker() {
-  const [tab, setTab] = useState<Tab>("Main");
+export function SyllabusTracker({ initialTab = "Main" }: { initialTab?: Tab }) {
+  const [tab, setTab] = useState<Tab>(initialTab);
 
   return (
     <main className="flex-1 bg-white px-6 py-6">

@@ -1,8 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getSupabaseEnv } from "@/utils/supabase/env";
+import { isLocalPreview } from "@/utils/preview";
 
 export async function createClient() {
+  if (isLocalPreview()) throw new Error("Supabase is disabled in Local demo preview.");
   const env = getSupabaseEnv();
 
   if (!env) {

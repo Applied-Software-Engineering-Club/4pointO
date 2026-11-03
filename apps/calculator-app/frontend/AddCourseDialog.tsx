@@ -12,9 +12,10 @@ export type AddCourseDialogHandle = {
 type AddCourseDialogProps = {
   ref?: Ref<AddCourseDialogHandle>;
   onAdd: (course: CourseSelection) => Promise<void>;
+  search?: typeof searchCourses;
 };
 
-export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
+export function AddCourseDialog({ ref, onAdd, search = searchCourses }: AddCourseDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [entryMode, setEntryMode] = useState<"search" | "manual">("search");
   const [query, setQuery] = useState("");
@@ -91,7 +92,7 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
 
     try {
       const normalized = query.trim();
-      setResults(normalized ? await searchCourses(normalized) : []);
+      setResults(normalized ? await search(normalized) : []);
     } catch (error) {
       setResults([]);
       setSearchError(error instanceof Error ? error.message : "Unable to search courses.");

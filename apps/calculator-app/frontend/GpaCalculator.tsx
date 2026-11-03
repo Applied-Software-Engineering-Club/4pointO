@@ -13,6 +13,7 @@ import {
 } from "@/apps/calculator-app/backend/gpa";
 import { AddCourseDialog, type AddCourseDialogHandle } from "./AddCourseDialog";
 import { GpaResults } from "./GpaResults";
+import { searchDemoCourses } from "@/utils/demo/fixtures";
 
 function toGpaCourse(course: DisplayUserCourse): GpaCourse {
   return {
@@ -102,6 +103,7 @@ type CourseField = "season" | "year" | "letterGrade" | "percentGrade";
 
 type GpaCalculatorProps = {
   courses: DisplayUserCourse[];
+  preview?: boolean;
 };
 
 function dropdownWidth(label: string) {
@@ -129,7 +131,7 @@ function isPercentDraft(value: string) {
   return /^\d{1,3}(\.\d{0,2})?$/.test(value) && Number(value) <= 100;
 }
 
-export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
+export function GpaCalculator({ courses: loadedCourses, preview = false }: GpaCalculatorProps) {
   const addCourseDialogRef = useRef<AddCourseDialogHandle>(null);
   const [courses, setCourses] = useState(loadedCourses);
   const [editing, setEditing] = useState(false);
@@ -154,7 +156,7 @@ export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
     setDeletingId(id);
 
     try {
-      await deleteUserCourse(id);
+      if (!preview) await deleteUserCourse(id);
       setCourses((current) => current.filter((course) => course.id !== id));
       setWhatIfChanges((current) => {
         const next = { ...current };
@@ -228,7 +230,7 @@ export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
     setSaveError(null);
 
     try {
-      const saved = await updateUserCourses(courses);
+      const saved = preview ? courses : await updateUserCourses(courses);
       setCourses(saved);
       setEditing(false);
     } catch {
@@ -250,6 +252,16 @@ export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
   }
 
   async function appendCourse(course: CourseSelection) {
+    if (preview) {
+      if (courses.some((existing) => existing.courseName === course.courseName.trim())) {
+        throw new Error("This course is already in your list.");
+      }
+      setCourses((current) => [...current, {
+        id: `demo-local-${crypto.randomUUID()}`, courseName: course.courseName.trim(),
+        season: "Fall", year: defaultYear, letterGrade: "", percentGrade: "", credits: String(course.units ?? 3),
+      }]);
+      return;
+    }
     const saved = await addUserCourse({
       ...course,
       season: "Fall",
@@ -284,7 +296,8 @@ export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
   const cgpaResult = calculateCgpa(gpaCourses);
 
   return (
-    <main className="flex-1 bg-white px-6 py-6">
+    <main className="tool-page gpa-page flex-1 px-6 py-6">
+      {preview ? <p className="preview-tool-notice">Sample GPA data · Changes stay in memory and reset when you leave this page.</p> : null}
       <section aria-label="Course grades">
         <h1 className="text-lg font-semibold text-neutral-900">Courses</h1>
         <div className="mt-4 flex items-center justify-between gap-2">
@@ -324,7 +337,7 @@ export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
               <h2 className="text-sm font-semibold text-neutral-900">
                 {section.title}
               </h2>
-              <ul className="mt-3 grid grid-cols-3 gap-3">
+              <ul className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
                 {section.courses.map((course) => {
                   const adjusting = editing || whatIfEnabled;
 
@@ -482,7 +495,7 @@ export function GpaCalculator({ courses: loadedCourses }: GpaCalculatorProps) {
         cgpa={cgpaResult.gpa}
         totalUnits={cgpaResult.units}
       />
-      <AddCourseDialog ref={addCourseDialogRef} onAdd={appendCourse} />
+      <AddCourseDialog ref={addCourseDialogRef} onAdd={appendCourse} search={preview ? searchDemoCourses : undefined} />
     </main>
   );
 }

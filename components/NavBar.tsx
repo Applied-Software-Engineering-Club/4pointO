@@ -3,6 +3,8 @@ import Link from "next/link";
 import { AccountMenu } from "@/components/AccountMenu";
 import { AuthDialog } from "@/components/AuthDialog";
 import { getAuthUser } from "@/utils/supabase/server";
+import { isLocalPreview } from "@/utils/preview";
+import { WorkspaceNav } from "./WorkspaceNav";
 
 function accountAvatar(metadata: Record<string, unknown> | undefined) {
   const value = metadata?.avatar_url ?? metadata?.picture;
@@ -10,19 +12,23 @@ function accountAvatar(metadata: Record<string, unknown> | undefined) {
 }
 
 export async function NavBar() {
-  const user = await getAuthUser();
+  const preview = isLocalPreview();
+  const user = preview ? null : await getAuthUser();
 
   return (
-    <header className="border-b border-neutral-200 bg-white">
-      <nav className="flex min-h-14 flex-wrap items-center gap-3 px-6 py-2">
+    <header className="workspace-header">
+      <div className="header-brand">
         <Link
           href="/"
-          className="text-lg font-semibold tracking-tight text-neutral-900"
+          className="wordmark"
         >
           4pointO
         </Link>
-        <div className="ml-auto">
-          {user ? (
+        <span className="semester-context">{preview ? "Fall 2026 · Demo" : `${new Date().getMonth() < 6 ? "Spring" : "Fall"} ${new Date().getFullYear()}`}</span>
+      </div>
+      <Suspense fallback={<div className="workspace-tabs" />}><WorkspaceNav /></Suspense>
+        <div className="header-account">
+          {preview ? <span className="demo-label"><span />Local demo preview.</span> : user ? (
             <AccountMenu
               avatarUrl={accountAvatar(user.user_metadata)}
               email={user.email ?? null}
@@ -33,7 +39,6 @@ export async function NavBar() {
             </Suspense>
           )}
         </div>
-      </nav>
     </header>
   );
 }
