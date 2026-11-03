@@ -1,6 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { getSupabaseEnv, isDevelopmentMode } from "@/utils/supabase/env";
+import {
+  devSignedOutCookie,
+  getSupabaseEnv,
+  isDevelopmentMode,
+} from "@/utils/supabase/env";
 
 const loggedMessages = new Set<string>();
 
@@ -73,7 +77,7 @@ export async function updateSession(request: NextRequest) {
       return supabaseResponse;
     }
 
-    if (!isDevelopmentMode()) {
+    if (!isDevelopmentMode() || request.cookies.has(devSignedOutCookie)) {
       return supabaseResponse;
     }
 

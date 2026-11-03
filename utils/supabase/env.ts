@@ -1,3 +1,5 @@
+export const devSignedOutCookie = "dev-signed-out";
+
 export function isDevelopmentMode() {
   return (
     process.env.NODE_ENV === "development" &&
