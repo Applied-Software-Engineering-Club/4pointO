@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent, type MouseEvent } from "react";
 import {
   searchCourses,
   type CatalogCourse,
@@ -19,8 +19,23 @@ export function CoursePlanner() {
   const [hasSearched, setHasSearched] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [planned, setPlanned] = useState<CatalogCourse[]>([]);
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   const plannedIds = new Set(planned.map((course) => course.catalog_course_id));
+
+  function openCourseModal() {
+    dialogRef.current?.showModal();
+  }
+
+  function closeCourseModal() {
+    dialogRef.current?.close();
+  }
+
+  function closeOnBackdropClick(event: MouseEvent<HTMLDialogElement>) {
+    if (event.target === event.currentTarget) {
+      event.currentTarget.close();
+    }
+  }
 
   async function runSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -100,11 +115,17 @@ export function CoursePlanner() {
                   key={course.catalog_course_id}
                   className="rounded-xl border border-neutral-200 bg-neutral-50 p-3"
                 >
-                  <p className="text-sm font-medium">{course.code}</p>
-                  <p className="mt-1 text-sm text-neutral-600">{course.title}</p>
-                  <p className="mt-1 text-xs text-neutral-500">
-                    {unitsLabel(course)}
-                  </p>
+                  <button
+                    type="button"
+                    onClick={openCourseModal}
+                    className="w-full text-left"
+                  >
+                    <p className="text-sm font-medium">{course.code}</p>
+                    <p className="mt-1 text-sm text-neutral-600">{course.title}</p>
+                    <p className="mt-1 text-xs text-neutral-500">
+                      {unitsLabel(course)}
+                    </p>
+                  </button>
                   <button
                     type="button"
                     disabled={added}
@@ -134,7 +155,11 @@ export function CoursePlanner() {
                 className="rounded-xl border border-neutral-200 bg-neutral-50 p-4"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div>
+                  <button
+                    type="button"
+                    onClick={openCourseModal}
+                    className="min-w-0 flex-1 text-left"
+                  >
                     <h3 className="text-base font-semibold text-neutral-900">
                       {course.code}
                     </h3>
@@ -142,7 +167,7 @@ export function CoursePlanner() {
                     <p className="mt-1 text-xs text-neutral-500">
                       {unitsLabel(course)}
                     </p>
-                  </div>
+                  </button>
                   <button
                     type="button"
                     aria-label={`Remove ${course.code}`}
@@ -157,6 +182,23 @@ export function CoursePlanner() {
           </ul>
         )}
       </section>
+      <dialog
+        ref={dialogRef}
+        aria-label="Course"
+        onClick={closeOnBackdropClick}
+        className="fixed inset-0 m-auto h-64 w-full max-w-lg rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg backdrop:bg-neutral-900/40"
+      >
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={closeCourseModal}
+            aria-label="Close"
+            className="inline-flex size-6 items-center justify-center text-lg leading-none font-semibold text-neutral-900 hover:text-neutral-600"
+          >
+            ×
+          </button>
+        </div>
+      </dialog>
     </main>
   );
 }
