@@ -144,12 +144,14 @@ export function TodoList() {
   const today = todayString();
   const sorted = [...items].sort(byDueDate);
   const overdue = sorted.filter((item) => !item.completed && item.dueDate !== null && item.dueDate < today);
-  const upcoming = sorted.filter((item) => !item.completed && !(item.dueDate !== null && item.dueDate < today));
+  const upcoming = sorted.filter((item) => !item.completed && item.dueDate !== null && item.dueDate >= today);
+  const noDueDate = sorted.filter((item) => !item.completed && item.dueDate === null);
   const completed = sorted.filter((item) => item.completed);
 
   const groups = [
     { name: "Overdue", items: overdue },
     { name: "Upcoming", items: upcoming },
+    { name: "No due date", items: noDueDate },
     { name: "Completed", items: completed },
   ];
 
