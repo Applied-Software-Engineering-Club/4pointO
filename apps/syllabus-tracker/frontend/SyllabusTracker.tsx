@@ -4,6 +4,7 @@ import { useState } from "react";
 import { GradeCalc } from "@/apps/grade-calc/frontend";
 import { Calendar } from "./Calendar";
 import { CourseList } from "./CourseList";
+import { TodoList } from "./TodoList";
 
 const tabs = ["Main", "Calendar", "Grade Calc"] as const;
 
@@ -51,6 +52,7 @@ export function SyllabusTracker() {
       ) : (
         <div role="tabpanel" aria-label="Main">
           <CourseList />
+          <TodoList />
         </div>
       )}
     </main>
