@@ -5,6 +5,7 @@ import { addUserCourse } from "@/apps/syllabus-tracker/backend/courses/addUserCo
 import { deleteUserCourse } from "@/apps/syllabus-tracker/backend/courses/deleteUserCourse";
 import { listUserCourses } from "@/apps/syllabus-tracker/backend/courses/listUserCourses";
 import { updateCourseProgress } from "@/apps/syllabus-tracker/backend/courses/updateCourseProgress";
+import { SyllabusUpload } from "./SyllabusUpload";
 import {
   progressSliderMax,
   type CourseProgress,
@@ -499,6 +500,12 @@ function AddCourseDialog({
           </button>
         </div>
 
+        <div className="mt-5">
+          <SyllabusUpload
+            onParsed={(fields) => setDraft((current) => ({ ...current, ...fields }))}
+          />
+        </div>
+
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <div>
             <label htmlFor="course-number" className="text-xs font-medium text-neutral-500">
@@ -687,7 +694,7 @@ export function CourseList() {
         <p className="mt-4 text-sm text-neutral-500">Loading courses…</p>
       ) : null}
       {status === "error" ? (
-        <p className="mt-4 text-sm text-red-700">Couldn't load your courses.</p>
+        <p className="mt-4 text-sm text-red-700">Could not load your courses.</p>
       ) : null}
       {status === "ready" ? (
         <ul className="mt-4 flex max-w-3xl flex-col gap-3">
