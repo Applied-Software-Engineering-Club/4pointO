@@ -377,6 +377,8 @@ export function CoursePlanner() {
             <p className="mt-1 text-sm whitespace-pre-wrap text-neutral-600">
               {selectedCourse.prerequisites ?? "None listed"}
             </p>
+            <h2 className="mt-4 text-sm font-semibold text-neutral-900">Minimum grade</h2>
+            <p className="mt-1 text-sm text-neutral-600">C-</p>
           </section>
         ) : null}
       </dialog>
