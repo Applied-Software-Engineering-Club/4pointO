@@ -1,0 +1,437 @@
+{
+  "catalog_id": "23",
+  "poid": "18783",
+  "name": "Computer Science, BS",
+  "degree": "BS",
+  "pathway": "4-year",
+  "total_units": 120,
+  "source_url": "https://catalog.sjsu.edu/preview_program.php?catoid=23&poid=18783",
+  "requirements": [
+    {
+      "title": "1. Complete the Baccalaureate Degree Requirements",
+      "rule": "unparsed",
+      "units": null,
+      "min_grade": null,
+      "courses": [],
+      "source_text": "Students must satisfy the specific degree requirements for their undergraduate major and fulfill the following University degree requirements: Exceptions for University Graduation Requirements including exemptions and waivers, are approved for specific majors and on a case-by-case evaluation only. Academic (program total units with an average 2.0 GPA - “C” or better) General Education (GE) (34 Lower Division + 9 Upper Division) American Institutions (AI) (0-6 units) (may be satisfied in GE Areas 3B, 4, UD 3, UD 4) Graduation Writing Assessment Requirement (GWAR) (3 units) Physical Education (PE) (0-2 units) Units in Residence (30 units, including 24 upper division and 12 in major) Upper Division Units (40 units, including 12 upper div in major for BA, 18 upper div in major for BS) Undergraduate Admission Procedures and Policies Apply for Graduation Information about the Commencement Ceremony and Conferral of the Degree",
+      "children": []
+    },
+    {
+      "title": "2. Major Preparation (27 units)",
+      "rule": "all_of",
+      "units": 27,
+      "min_grade": null,
+      "courses": [
+        "MATH 30",
+        "MATH 31",
+        "MATH 42",
+        "MATH 39",
+        "PHIL 134"
+      ],
+      "source_text": "2. Major Preparation (27 units)",
+      "children": [
+        {
+          "title": "Additional Mathematics Course (3 units)",
+          "rule": "choose_courses",
+          "units": 3,
+          "min_grade": null,
+          "courses": [
+            "MATH 32",
+            "MATH 142",
+            "MATH 161A"
+          ],
+          "source_text": "Complete one course:",
+          "children": []
+        },
+        {
+          "title": "Approved Science Electives (8 units)",
+          "rule": "unparsed",
+          "units": 8,
+          "min_grade": null,
+          "courses": [
+            "BIOL 30",
+            "BIOL 31",
+            "CHEM 1A",
+            "GEOL 1",
+            "GEOL 4L",
+            "GEOL 7",
+            "METR 10",
+            "PHYS 50",
+            "PHYS 51"
+          ],
+          "source_text": "Students must complete a total of 8 units of science electives. At least six of those units must be fulfilled by the courses listed below. The remaining units may be satisfied by GE Areas 5A, 5B, 5C.",
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "3. Major Requirements (55 units)",
+      "rule": "all_of",
+      "units": 55,
+      "min_grade": null,
+      "courses": [],
+      "source_text": "3. Major Requirements (55 units)",
+      "children": [
+        {
+          "title": "Lower Division (11 units)",
+          "rule": "all_of",
+          "units": 11,
+          "min_grade": null,
+          "courses": [
+            "CS 46B",
+            "CS 47"
+          ],
+          "source_text": "Lower Division (11 units)",
+          "children": [
+            {
+              "title": "CS 46A or CS 46AX",
+              "rule": "choose_courses",
+              "units": 4,
+              "min_grade": null,
+              "courses": [
+                "CS 46A",
+                "CS 46AX"
+              ],
+              "source_text": "CS 46A or CS 46AX",
+              "children": []
+            }
+          ]
+        },
+        {
+          "title": "Upper Division (27 units)",
+          "rule": "all_of",
+          "units": 27,
+          "min_grade": null,
+          "courses": [
+            "CS 146",
+            "CS 147",
+            "CS 149",
+            "CS 151",
+            "CS 152",
+            "CS 154",
+            "CS 160",
+            "CS 157A",
+            "CS 166"
+          ],
+          "source_text": "Upper Division (27 units)",
+          "children": []
+        },
+        {
+          "title": "Major Electives (17 units)",
+          "rule": "unparsed",
+          "units": 17,
+          "min_grade": null,
+          "courses": [],
+          "source_text": "Major Electives (17 units)",
+          "children": [
+            {
+              "title": "Required Major Elective (minimum of one course)",
+              "rule": "unparsed",
+              "units": null,
+              "min_grade": null,
+              "courses": [
+                "CS 116A",
+                "CS 116B",
+                "CS 122",
+                "CS 123A",
+                "CS 123B",
+                "CS 131",
+                "CS 133",
+                "CS 134",
+                "CS 136",
+                "CS 144",
+                "CS 148",
+                "CS 153",
+                "CS 155",
+                "CS 156",
+                "CS 157B",
+                "CS 157C",
+                "CS 158A",
+                "CS 158B",
+                "CS 159",
+                "CS 161",
+                "CS 168",
+                "CS 171",
+                "CS 174",
+                "CS 175",
+                "CS 176"
+              ],
+              "source_text": "Complete at least one major elective from the following list of electives:",
+              "children": []
+            },
+            {
+              "title": "Additional Upper Division Electives",
+              "rule": "unparsed",
+              "units": null,
+              "min_grade": null,
+              "courses": [
+                "CS 108",
+                "CS 132",
+                "BIOL 132",
+                "CS 143C",
+                "CS 143M",
+                "CS 185A",
+                "CS 185C",
+                "CS 180",
+                "CS 180H",
+                "CS 190",
+                "CS 190I"
+              ],
+              "source_text": "At most 6 units of CS 85A/C and CS 185A/C may be used. CS 180 - Individual Studies 1-3 unit(s) or CS 180H - Individual Studies for Honors 3 unit(s) (may be used with prior advisor approval) CS 190 - Internship Project 1 unit(s) or CS 190I - Internship Project 3 unit(s) (at most 3 units may be used)",
+              "children": []
+            },
+            {
+              "title": "Lower Division Electives",
+              "rule": "unparsed",
+              "units": null,
+              "min_grade": null,
+              "courses": [
+                "CS 48",
+                "CS 85A",
+                "CS 49C",
+                "CS 49J"
+              ],
+              "source_text": "Students must secure prior department consent to use the following courses to satisfy the major elective requirement, except for CS 48, which does not require special consent. Only one of the following: or",
+              "children": []
+            },
+            {
+              "title": "Mathematics Electives",
+              "rule": "unparsed",
+              "units": null,
+              "min_grade": null,
+              "courses": [
+                "MATH 142",
+                "MATH 161A",
+                "MATH 162",
+                "MATH 164",
+                "MATH 177",
+                "MATH 178",
+                "MATH 179",
+                "MATH 203"
+              ],
+              "source_text": "MATH 203 - Applied Mathematics, Computation, and Statistics Projects 3 unit(s) (may be used with prior advisor approval)",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "4. University Electives (3 units)",
+      "rule": "unparsed",
+      "units": 3,
+      "min_grade": null,
+      "courses": [],
+      "source_text": "4. University Electives (3 units)",
+      "children": []
+    }
+  ],
+  "roadmap": [
+    {
+      "year": 1,
+      "term": "Fall",
+      "items": [
+        {
+          "kind": "course",
+          "code": "CS 46A"
+        },
+        {
+          "kind": "course",
+          "code": "MATH 30"
+        },
+        {
+          "kind": "course",
+          "code": "MATH 42"
+        },
+        {
+          "kind": "ge",
+          "area": "1A",
+          "units": 3
+        },
+        {
+          "kind": "ge",
+          "area": "4",
+          "units": null
+        }
+      ]
+    },
+    {
+      "year": 1,
+      "term": "Spring",
+      "items": [
+        {
+          "kind": "course",
+          "code": "CS 46B"
+        },
+        {
+          "kind": "course",
+          "code": "MATH 31"
+        },
+        {
+          "kind": "ge",
+          "area": "4",
+          "units": null
+        },
+        {
+          "kind": "ge",
+          "area": "1B",
+          "units": null
+        }
+      ]
+    },
+    {
+      "year": 2,
+      "term": "Fall",
+      "items": [
+        {
+          "kind": "course",
+          "code": "CS 47"
+        },
+        {
+          "kind": "course",
+          "code": "CS 146"
+        },
+        {
+          "kind": "elective",
+          "units": null
+        },
+        {
+          "kind": "ge",
+          "area": "1C",
+          "units": null
+        },
+        {
+          "kind": "ge",
+          "area": "3A",
+          "units": null
+        }
+      ]
+    },
+    {
+      "year": 2,
+      "term": "Spring",
+      "items": [
+        {
+          "kind": "course",
+          "code": "CS 147"
+        },
+        {
+          "kind": "course",
+          "code": "CS 151"
+        },
+        {
+          "kind": "course",
+          "code": "MATH 39"
+        },
+        {
+          "kind": "elective",
+          "units": 3
+        },
+        {
+          "kind": "ge",
+          "area": "3B",
+          "units": null
+        }
+      ]
+    },
+    {
+      "year": 3,
+      "term": "Fall",
+      "items": [
+        {
+          "kind": "course",
+          "code": "CS 149"
+        },
+        {
+          "kind": "elective",
+          "units": null
+        },
+        {
+          "kind": "elective",
+          "units": 3
+        },
+        {
+          "kind": "ge",
+          "area": "6",
+          "units": null
+        }
+      ]
+    },
+    {
+      "year": 3,
+      "term": "Spring",
+      "items": [
+        {
+          "kind": "course",
+          "code": "CS 152"
+        },
+        {
+          "kind": "course",
+          "code": "PHIL 134"
+        },
+        {
+          "kind": "course",
+          "code": "CS 100W"
+        },
+        {
+          "kind": "course",
+          "code": "MATH 32"
+        },
+        {
+          "kind": "elective",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "year": 4,
+      "term": "Fall",
+      "items": [
+        {
+          "kind": "course",
+          "code": "CS 157A"
+        },
+        {
+          "kind": "course",
+          "code": "CS 160"
+        },
+        {
+          "kind": "course",
+          "code": "CS 166"
+        },
+        {
+          "kind": "elective",
+          "units": 3
+        },
+        {
+          "kind": "ge",
+          "area": "UD",
+          "units": null
+        }
+      ]
+    },
+    {
+      "year": 4,
+      "term": "Spring",
+      "items": [
+        {
+          "kind": "course",
+          "code": "CS 154"
+        },
+        {
+          "kind": "elective",
+          "units": 5
+        },
+        {
+          "kind": "ge",
+          "area": "UD",
+          "units": null
+        },
+        {
+          "kind": "elective",
+          "units": 3
+        }
+      ]
+    }
+  ]
+}

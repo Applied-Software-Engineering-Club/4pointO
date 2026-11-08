@@ -1,0 +1,353 @@
+{
+  "catalog_id": "23",
+  "poid": "18924",
+  "name": "Software Engineering, BS",
+  "degree": "BS",
+  "pathway": "4-year",
+  "total_units": 120,
+  "source_url": "https://catalog.sjsu.edu/preview_program.php?catoid=23&poid=18924",
+  "requirements": [
+    {
+      "title": "1. Complete the Baccalaureate Degree Requirements",
+      "rule": "unparsed",
+      "units": null,
+      "min_grade": null,
+      "courses": [],
+      "source_text": "Students must satisfy the specific degree requirements for their undergraduate major and fulfill the following University degree requirements: Exceptions for University Graduation Requirements including exemptions and waivers, are approved for specific majors and on a case-by-case evaluation only. Academic (program total units with an average 2.0 GPA - “C” or better) General Education (GE) (34 Lower Division + 9 Upper Division) American Institutions (AI) (0-6 units) (may be satisfied in GE Areas 3B, 4, UD 3, UD 4) Graduation Writing Assessment Requirement (GWAR) (3 units) Physical Education (PE) (0-2 units) Units in Residence (30 units, including 24 upper division and 12 in major) Upper Division Units (40 units, including 12 upper div in major for BA, 18 upper div in major for BS) Undergraduate Admission Procedures and Policies Apply for Graduation Information about the Commencement Ceremony and Conferral of the Degree",
+      "children": []
+    },
+    {
+      "title": "2. Major Preparation (33 units)",
+      "rule": "unparsed",
+      "units": 33,
+      "min_grade": "C-",
+      "courses": [
+        "MATH 30",
+        "MATH 31",
+        "MATH 42",
+        "PHYS 50",
+        "ENGL 1B"
+      ],
+      "source_text": "Students must complete the following courses with “C” or better to graduate: MATH 30, MATH 31, PHYS 50. The remaining courses in Preparation for the Major must be completed with “C-” or better to graduate. GE Area 5B (minimum 3 units) ENGL 1B - Argument and Analysis 3 unit(s) (GE Area 3B / Formerly Area C2) (or equivalent second semester composition course.)",
+      "children": [
+        {
+          "title": "Complete One Course From:",
+          "rule": "choose_courses",
+          "units": 3,
+          "min_grade": "C-",
+          "courses": [
+            "MATH 33LA",
+            "MATH 142"
+          ],
+          "source_text": "Complete One Course From:",
+          "children": []
+        },
+        {
+          "title": "Complete One Course From:",
+          "rule": "choose_courses",
+          "units": 3,
+          "min_grade": "C-",
+          "courses": [
+            "ISE 130",
+            "MATH 161A"
+          ],
+          "source_text": "Complete One Course From:",
+          "children": []
+        },
+        {
+          "title": "Complete Additional Math/Science Electives (7 units)",
+          "rule": "unparsed",
+          "units": 7,
+          "min_grade": "C-",
+          "courses": [
+            "MATH 32",
+            "MATH 108",
+            "MATH 115",
+            "MATH 126",
+            "MATH 142",
+            "MATH 150",
+            "MATH 170"
+          ],
+          "source_text": "Students must complete a total of 7 units from any of the following courses. Any GE Area 5 course",
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "3. Major Requirements (60 units)",
+      "rule": "unparsed",
+      "units": 60,
+      "min_grade": "C-",
+      "courses": [],
+      "source_text": "Students must complete all the courses in Core Courses, Required Courses and Approved Upper Division Electives sections with “C-” or better to graduate.",
+      "children": [
+        {
+          "title": "Core Courses (11 units)",
+          "rule": "all_of",
+          "units": 11,
+          "min_grade": "C-",
+          "courses": [
+            "CS 46A",
+            "CS 46B",
+            "ENGR 10"
+          ],
+          "source_text": "Core Courses (11 units)",
+          "children": []
+        },
+        {
+          "title": "Major Courses (43 units)",
+          "rule": "unparsed",
+          "units": 43,
+          "min_grade": "C-",
+          "courses": [
+            "CMPE 70",
+            "CMPE 120",
+            "CMPE 131",
+            "CMPE 148",
+            "CMPE 165",
+            "CMPE 172",
+            "CMPE 187",
+            "CS 146",
+            "CS 149",
+            "CS 157A",
+            "CS 166",
+            "ISE 164",
+            "CMPE 195A",
+            "CMPE 195B",
+            "ENGR 195A",
+            "ENGR 195B"
+          ],
+          "source_text": "Note: Must Complete CMPE 195A / CMPE 195B and ENGR 195A / ENGR 195B with C or Better to meet GE Area requirements Senior Design:",
+          "children": []
+        },
+        {
+          "title": "Approved Upper Division Electives (6 units)",
+          "rule": "unparsed",
+          "units": 6,
+          "min_grade": "C-",
+          "courses": [],
+          "source_text": "Selected in consultation with the student’s advisor",
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "4. University Electives (6 units)",
+      "rule": "unparsed",
+      "units": 6,
+      "min_grade": null,
+      "courses": [],
+      "source_text": "Lower or Upper Division Courses.",
+      "children": []
+    }
+  ],
+  "roadmap": [
+    {
+      "year": 1,
+      "term": "Fall",
+      "items": [
+        {
+          "kind": "course",
+          "code": "CS 46A"
+        },
+        {
+          "kind": "course",
+          "code": "ENGR 10"
+        },
+        {
+          "kind": "ge",
+          "area": "1A",
+          "units": 3
+        },
+        {
+          "kind": "ge",
+          "area": "1C",
+          "units": 3
+        },
+        {
+          "kind": "course",
+          "code": "MATH 30"
+        }
+      ]
+    },
+    {
+      "year": 1,
+      "term": "Spring",
+      "items": [
+        {
+          "kind": "course",
+          "code": "CS 46B"
+        },
+        {
+          "kind": "course",
+          "code": "ENGL 1B"
+        },
+        {
+          "kind": "course",
+          "code": "MATH 42"
+        },
+        {
+          "kind": "course",
+          "code": "PHYS 50"
+        }
+      ]
+    },
+    {
+      "year": 2,
+      "term": "Fall",
+      "items": [
+        {
+          "kind": "ge",
+          "area": "5B",
+          "units": 3
+        },
+        {
+          "kind": "course",
+          "code": "CMPE 131"
+        },
+        {
+          "kind": "ge",
+          "area": "3A",
+          "units": null
+        },
+        {
+          "kind": "ge",
+          "area": "4",
+          "units": null
+        },
+        {
+          "kind": "course",
+          "code": "MATH 31"
+        }
+      ]
+    },
+    {
+      "year": 2,
+      "term": "Spring",
+      "items": [
+        {
+          "kind": "course",
+          "code": "CS 146"
+        },
+        {
+          "kind": "ge",
+          "area": "6",
+          "units": null
+        },
+        {
+          "kind": "ge",
+          "area": "4",
+          "units": null
+        },
+        {
+          "kind": "course",
+          "code": "CMPE 70"
+        },
+        {
+          "kind": "course",
+          "code": "CMPE 165"
+        }
+      ]
+    },
+    {
+      "year": 3,
+      "term": "Fall",
+      "items": [
+        {
+          "kind": "elective",
+          "units": 3
+        },
+        {
+          "kind": "course",
+          "code": "CMPE 120"
+        },
+        {
+          "kind": "course",
+          "code": "CS 149"
+        },
+        {
+          "kind": "course",
+          "code": "CS 157A"
+        },
+        {
+          "kind": "course",
+          "code": "CMPE 187"
+        }
+      ]
+    },
+    {
+      "year": 3,
+      "term": "Spring",
+      "items": [
+        {
+          "kind": "course",
+          "code": "CMPE 148"
+        },
+        {
+          "kind": "elective",
+          "units": 3
+        },
+        {
+          "kind": "course",
+          "code": "ENGR 100W"
+        },
+        {
+          "kind": "course",
+          "code": "MATH 33LA"
+        }
+      ]
+    },
+    {
+      "year": 4,
+      "term": "Fall",
+      "items": [
+        {
+          "kind": "course",
+          "code": "CMPE 172"
+        },
+        {
+          "kind": "course",
+          "code": "MATH 161A"
+        },
+        {
+          "kind": "course",
+          "code": "CMPE 195A"
+        },
+        {
+          "kind": "course",
+          "code": "CS 166"
+        },
+        {
+          "kind": "course",
+          "code": "ENGR 195A"
+        }
+      ]
+    },
+    {
+      "year": 4,
+      "term": "Spring",
+      "items": [
+        {
+          "kind": "course",
+          "code": "CMPE 195B"
+        },
+        {
+          "kind": "course",
+          "code": "ENGR 195B"
+        },
+        {
+          "kind": "course",
+          "code": "ISE 164"
+        },
+        {
+          "kind": "elective",
+          "units": 3
+        },
+        {
+          "kind": "elective",
+          "units": 3
+        }
+      ]
+    }
+  ]
+}
