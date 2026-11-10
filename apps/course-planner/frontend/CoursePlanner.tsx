@@ -53,6 +53,7 @@ export function CoursePlanner() {
   const [hasSearched, setHasSearched] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [planned, setPlanned] = useState<CatalogCourse[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState<CatalogCourse | null>(null);
   const [previousCourses, setPreviousCourses] = useState<PreviousCourse[]>([]);
   const [transcriptStatus, setTranscriptStatus] = useState<
     "idle" | "reading" | "error"
@@ -63,7 +64,8 @@ export function CoursePlanner() {
 
   const plannedIds = new Set(planned.map((course) => course.catalog_course_id));
 
-  function openCourseModal() {
+  function openCourseModal(course: CatalogCourse) {
+    setSelectedCourse(course);
     dialogRef.current?.showModal();
   }
 
@@ -226,7 +228,7 @@ export function CoursePlanner() {
                 >
                   <button
                     type="button"
-                    onClick={openCourseModal}
+                    onClick={() => openCourseModal(course)}
                     className="w-full text-left"
                   >
                     <p className="text-sm font-medium">{course.code}</p>
@@ -328,7 +330,7 @@ export function CoursePlanner() {
                 <div className="flex items-start justify-between gap-3">
                   <button
                     type="button"
-                    onClick={openCourseModal}
+                    onClick={() => openCourseModal(course)}
                     className="min-w-0 flex-1 text-left"
                   >
                     <h3 className="text-base font-semibold text-neutral-900">
@@ -369,6 +371,16 @@ export function CoursePlanner() {
             ×
           </button>
         </div>
+        {selectedCourse ? (
+          <section aria-label="Prerequisites">
+            <h2 className="text-sm font-semibold text-neutral-900">Prerequisites</h2>
+            <p className="mt-1 text-sm whitespace-pre-wrap text-neutral-600">
+              {selectedCourse.prerequisites ?? "None listed"}
+            </p>
+            <h2 className="mt-4 text-sm font-semibold text-neutral-900">Minimum grade</h2>
+            <p className="mt-1 text-sm text-neutral-600">C-</p>
+          </section>
+        ) : null}
       </dialog>
       <dialog
         ref={transcriptDialogRef}
