@@ -6,6 +6,9 @@ import {
   type CatalogCourse,
 } from "@/apps/calculator-app/backend/course-service";
 import type { TranscriptCourse } from "@/apps/course-planner/backend/parseTranscript";
+import { auditDegree, type DegreeProgram } from "@/apps/course-planner/backend/degreeAudit";
+import csProgram from "@/utils/data/programs/computer-science-bs.json";
+import { DegreeChecklist } from "./DegreeChecklist";
 
 function unitsLabel(course: CatalogCourse) {
   return course.units_min === course.units_max
@@ -171,6 +174,10 @@ export function CoursePlanner() {
   }
 
   const previousTerms = coursesByTerm(previousCourses);
+  const audit =
+    previousCourses.length > 0
+      ? auditDegree(csProgram as unknown as DegreeProgram, previousCourses)
+      : null;  
 
   return (
     <main className="flex-1 bg-white px-6 py-6">
@@ -313,7 +320,8 @@ export function CoursePlanner() {
           </div>
         </section>
       ) : null}
-
+      
+      {audit ? <DegreeChecklist audit={audit} /> : null}
       <section className="mt-8" aria-label="Planned courses">
         <h2 className="text-sm font-semibold text-neutral-900">Your plan</h2>
         {planned.length === 0 ? (
