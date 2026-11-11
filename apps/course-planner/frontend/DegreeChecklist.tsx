@@ -123,7 +123,7 @@ export function DegreeChecklist({ audit }: { audit: AuditResult }) {
   const { required, completed, inProgress } = audit.totalUnits;
 
   return (
-    <section aria-label="Degree progress" className="mt-8 max-w-3xl">
+    <section aria-label="Degree progress" className="mt-6 max-w-3xl">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-sm font-semibold text-neutral-900">Degree progress</h2>
         <a

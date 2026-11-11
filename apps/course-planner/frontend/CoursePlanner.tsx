@@ -25,6 +25,10 @@ const seasonOrder: Record<string, number> = {
   Fall: 3,
 };
 
+const recordTabs = ["Taken courses", "Checklist"] as const;
+
+type RecordTab = (typeof recordTabs)[number];
+
 function termRank(title: string) {
   const [season, year = ""] = title.split(" ");
   const yearNumber = /^\d{4}$/.test(year) ? Number(year) : -1;
@@ -58,6 +62,7 @@ export function CoursePlanner() {
   const [planned, setPlanned] = useState<CatalogCourse[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<CatalogCourse | null>(null);
   const [previousCourses, setPreviousCourses] = useState<PreviousCourse[]>([]);
+  const [recordTab, setRecordTab] = useState<RecordTab>("Taken courses");
   const [transcriptStatus, setTranscriptStatus] = useState<
     "idle" | "reading" | "error"
   >("idle");
@@ -259,69 +264,123 @@ export function CoursePlanner() {
         )}
       </div>
 
-      {previousTerms.length > 0 ? (
-        <section className="mt-8" aria-label="Previous courses">
-          <h2 className="text-sm font-semibold text-neutral-900">Previous courses</h2>
-          <div className="mt-6 flex flex-col gap-8">
-            {previousTerms.map((section) => (
-              <section key={section.title} aria-label={section.title}>
-                <h3 className="text-sm font-semibold text-neutral-900">
-                  {section.title}
-                </h3>
-                <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {section.courses.map((course) => (
-                    <li
-                      key={course.id}
-                      className="rounded-xl border border-neutral-200 bg-neutral-50 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <h4 className="text-base font-semibold text-neutral-900">
-                          {course.code}
-                        </h4>
-                        <button
-                          type="button"
-                          aria-label={`Remove ${course.code}`}
-                          onClick={() => removePreviousCourse(course.id)}
-                          className="inline-flex size-6 shrink-0 items-center justify-center text-lg leading-none font-semibold text-red-600 hover:text-red-700"
+      <div className="mt-8">
+        <div
+          role="tablist"
+          aria-label="Course records"
+          className="inline-flex rounded-xl border border-neutral-200 bg-white p-1 shadow-sm"
+        >
+          {recordTabs.map((name) => {
+            const selected = recordTab === name;
+            const tabId = name === "Taken courses" ? "record-tab-courses" : "record-tab-checklist";
+            const panelId = name === "Taken courses" ? "record-panel-courses" : "record-panel-checklist";
+
+            return (
+              <button
+                key={name}
+                type="button"
+                role="tab"
+                id={tabId}
+                aria-selected={selected}
+                aria-controls={panelId}
+                onClick={() => setRecordTab(name)}
+                className={
+                  selected
+                    ? "rounded-lg bg-neutral-900 px-4 py-1.5 text-sm font-medium text-white"
+                    : "rounded-lg px-4 py-1.5 text-sm font-medium text-neutral-900 hover:bg-neutral-50"
+                }
+              >
+                {name}
+              </button>
+            );
+          })}
+        </div>
+        {recordTab === "Taken courses" ? (
+          <section
+            id="record-panel-courses"
+            role="tabpanel"
+            aria-labelledby="record-tab-courses"
+            className="mt-6"
+          >
+            {previousTerms.length === 0 ? (
+              <p className="text-sm text-neutral-500">
+                Upload a transcript to see courses you have taken.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-8">
+                {previousTerms.map((section) => (
+                  <section key={section.title} aria-label={section.title}>
+                    <h2 className="text-sm font-semibold text-neutral-900">
+                      {section.title}
+                    </h2>
+                    <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {section.courses.map((course) => (
+                        <li
+                          key={course.id}
+                          className="rounded-xl border border-neutral-200 bg-neutral-50 p-4"
                         >
-                          ×
-                        </button>
-                      </div>
-                      {course.title ? (
-                        <p className="mt-1 text-sm text-neutral-600">{course.title}</p>
-                      ) : null}
-                      <div className="mt-4 grid grid-cols-3 gap-3">
-                        <div>
-                          <p className="text-xs font-medium text-neutral-500">
-                            Letter grade
-                          </p>
-                          <p className="mt-1 text-sm font-medium text-neutral-900">
-                            {course.letterGrade || "—"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-neutral-500">Credits</p>
-                          <p className="mt-1 text-sm font-medium text-neutral-900">
-                            {course.units || "—"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-neutral-500">Grade points</p>
-                          <p className="mt-1 text-sm font-medium text-neutral-900">
-                            {course.points || "—"}
-                          </p>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))}
+                          <div className="flex items-start justify-between gap-3">
+                            <h3 className="text-base font-semibold text-neutral-900">
+                              {course.code}
+                            </h3>
+                            <button
+                              type="button"
+                              aria-label={`Remove ${course.code}`}
+                              onClick={() => removePreviousCourse(course.id)}
+                              className="inline-flex size-6 shrink-0 items-center justify-center text-lg leading-none font-semibold text-red-600 hover:text-red-700"
+                            >
+                              ×
+                            </button>
+                          </div>
+                          {course.title ? (
+                            <p className="mt-1 text-sm text-neutral-600">{course.title}</p>
+                          ) : null}
+                          <div className="mt-4 grid grid-cols-3 gap-3">
+                            <div>
+                              <p className="text-xs font-medium text-neutral-500">
+                                Letter grade
+                              </p>
+                              <p className="mt-1 text-sm font-medium text-neutral-900">
+                                {course.letterGrade || "—"}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-neutral-500">Credits</p>
+                              <p className="mt-1 text-sm font-medium text-neutral-900">
+                                {course.units || "—"}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-neutral-500">Grade points</p>
+                              <p className="mt-1 text-sm font-medium text-neutral-900">
+                                {course.points || "—"}
+                              </p>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+              </div>
+            )}
+          </section>
+        ) : (
+          <div
+            id="record-panel-checklist"
+            role="tabpanel"
+            aria-labelledby="record-tab-checklist"
+          >
+            {audit ? (
+              <DegreeChecklist audit={audit} />
+            ) : (
+              <p className="mt-6 text-sm text-neutral-500">
+                Upload a transcript to see your degree checklist.
+              </p>
+            )}
           </div>
-        </section>
-      ) : null}
-      
-      {audit ? <DegreeChecklist audit={audit} /> : null}
+        )}
+      </div>
       <section className="mt-8" aria-label="Planned courses">
         <h2 className="text-sm font-semibold text-neutral-900">Your plan</h2>
         {planned.length === 0 ? (
