@@ -12,10 +12,10 @@ const statusLabel: Record<AuditStatus, string> = {
 };
 
 const statusClassName: Record<AuditStatus, string> = {
-  met: "border-green-200 bg-green-50 text-green-800",
-  in_progress: "border-amber-200 bg-amber-50 text-amber-800",
-  unmet: "border-neutral-200 bg-white text-neutral-700",
-  manual_check: "border-neutral-200 bg-neutral-100 text-neutral-600",
+  met: "text-green-700",
+  in_progress: "text-amber-700",
+  unmet: "text-neutral-500",
+  manual_check: "text-neutral-500",
 };
 
 function UnitsBar({ completed, required }: { completed: number; required: number }) {
@@ -69,7 +69,7 @@ function RequirementSection({
       <div className="flex items-start justify-between gap-3">
         <Heading className="text-sm font-semibold text-neutral-900">{requirement.title}</Heading>
         <span
-          className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium ${statusClassName[requirement.status]}`}
+          className={`shrink-0 text-xs font-medium ${statusClassName[requirement.status]}`}
         >
           {statusLabel[requirement.status]}
         </span>
