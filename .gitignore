@@ -48,3 +48,5 @@ __pycache__/
 
 # full catalog snapshot; loaded into Supabase a few times a year
 utils/data/courses.json
+# professor-course snapshot scraped from a class schedule
+utils/data/professor-courses.json
