@@ -116,3 +116,64 @@ create unique index if not exists gpa_calc_user_courses_catalog_term_uidx
 create unique index if not exists gpa_calc_user_courses_manual_term_uidx
   on public."gpa-calc-user-courses" (user_id, season, year, course_name)
   where source = 'manual';
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'gpa_calc_user_courses_letter_grade_check'
+      and conrelid = 'public."gpa-calc-user-courses"'::regclass
+  ) then
+    alter table public."gpa-calc-user-courses"
+      add constraint gpa_calc_user_courses_letter_grade_check
+      check (
+        letter_grade is null
+        or letter_grade in (
+          'A+', 'A', 'A-',
+          'B+', 'B', 'B-',
+          'C+', 'C', 'C-',
+          'D+', 'D', 'D-',
+          'F', 'CR', 'NC', 'W', 'WU', 'I'
+        )
+      );
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'gpa_calc_user_courses_percent_grade_check'
+      and conrelid = 'public."gpa-calc-user-courses"'::regclass
+  ) then
+    alter table public."gpa-calc-user-courses"
+      add constraint gpa_calc_user_courses_percent_grade_check
+      check (
+        percent_grade is null
+        or (
+          percent_grade ~ '^[0-9]{1,3}(\.[0-9]{1,2})?$'
+          and case
+            when percent_grade ~ '^[0-9]{1,3}(\.[0-9]{1,2})?$'
+              then percent_grade::numeric <= 100
+            else false
+          end
+        )
+      );
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'gpa_calc_user_courses_units_check'
+      and conrelid = 'public."gpa-calc-user-courses"'::regclass
+  ) then
+    alter table public."gpa-calc-user-courses"
+      add constraint gpa_calc_user_courses_units_check
+      check (units is null or (units >= 0.5 and units <= 6));
+  end if;
+end $$;
