@@ -1,5 +1,8 @@
 const MAX_SEARCH_RESULTS = 10;
 
+export const CATALOG_COURSE_COLUMNS =
+  "catalog_course_id, code, subject, number, title, units_min, units_max, description, prerequisites, corequisites, grading, notes, section, source_url";
+
 export type CatalogCourse = {
   catalog_course_id: string;
   code: string;
@@ -59,30 +62,10 @@ export function parseCourse(row: SupabaseCourseRow): CatalogCourse | null {
   };
 }
 
-function getSupabaseConfig() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
-  if (!url || !anonKey) {
-    throw new Error("Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local.");
+export function catalogCourses(rows: unknown): CatalogCourse[] {
+  if (!Array.isArray(rows)) {
+    return [];
   }
-  return { url: url.replace(/\/$/, ""), anonKey };
-}
-
-export async function searchCourses(query: string): Promise<CatalogCourse[]> {
-  const { url, anonKey } = getSupabaseConfig();
-  const normalized = query.trim().replace(/[,*()]/g, " ");
-  const endpoint = new URL(`${url}/rest/v1/courses`);
-  endpoint.searchParams.set("select", "*");
-  endpoint.searchParams.set("limit", String(MAX_SEARCH_RESULTS));
-  if (normalized) {
-    const pattern = `*${normalized}*`;
-    endpoint.searchParams.set("or", `(code.ilike.${pattern},title.ilike.${pattern},subject.ilike.${pattern},number.ilike.${pattern},section.ilike.${pattern})`);
-  }
-
-  const response = await fetch(endpoint, { headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` } });
-  if (!response.ok) throw new Error(`Supabase course search failed (${response.status}).`);
-  const rows: unknown = await response.json();
-  if (!Array.isArray(rows)) throw new Error("Supabase returned an invalid courses response.");
 
   return rows
     .filter((row): row is SupabaseCourseRow => typeof row === "object" && row !== null)
@@ -91,16 +74,4 @@ export async function searchCourses(query: string): Promise<CatalogCourse[]> {
     .slice(0, MAX_SEARCH_RESULTS);
 }
 
-export async function getCourseDetails(id: string): Promise<CatalogCourse | undefined> {
-  const { url, anonKey } = getSupabaseConfig();
-  const endpoint = new URL(`${url}/rest/v1/courses`);
-  endpoint.searchParams.set("select", "*");
-  endpoint.searchParams.set("catalog_course_id", `eq.${id}`);
-  endpoint.searchParams.set("limit", "1");
-  const response = await fetch(endpoint, { headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` } });
-  if (!response.ok) throw new Error(`Supabase course lookup failed (${response.status}).`);
-  const rows: unknown = await response.json();
-  if (!Array.isArray(rows)) throw new Error("Supabase returned an invalid course response.");
-  const row = rows.find((candidate) => typeof candidate === "object" && candidate !== null);
-  return row ? parseCourse(row as SupabaseCourseRow) ?? undefined : undefined;
-}
+export { MAX_SEARCH_RESULTS };

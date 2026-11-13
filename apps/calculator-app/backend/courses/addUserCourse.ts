@@ -3,6 +3,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/utils/supabase/server";
 import {
+  MAX_CATALOG_COURSE_ID_LENGTH,
+  MAX_COURSE_NAME_LENGTH,
   SEASONS,
   type CourseSelection,
   type SavedUserCourse,
@@ -53,15 +55,29 @@ export type AddUserCourseResult =
   | { duplicate: true }
   | { duplicate: false; course: SavedUserCourse };
 
+function isCourseSource(value: unknown): value is CourseSelection["source"] {
+  return value === "catalog" || value === "manual";
+}
+
 export async function addUserCourse(
   course: NewUserCourse,
 ): Promise<AddUserCourseResult> {
   const courseName = course.courseName.trim();
-  if (!courseName || !SEASONS.includes(course.season) || !/^\d{4}$/.test(course.year)) {
+  const catalogCourseId = course.catalogCourseId?.trim() ?? "";
+  if (
+    !isCourseSource(course.source) ||
+    !courseName ||
+    courseName.length > MAX_COURSE_NAME_LENGTH ||
+    !SEASONS.includes(course.season) ||
+    !/^\d{4}$/.test(course.year)
+  ) {
     throw new Error("Couldn't save this course.");
   }
 
-  if (course.source === "catalog" && !course.catalogCourseId) {
+  if (
+    course.source === "catalog" &&
+    (!catalogCourseId || catalogCourseId.length > MAX_CATALOG_COURSE_ID_LENGTH)
+  ) {
     throw new Error("Couldn't save this course.");
   }
 
@@ -78,10 +94,13 @@ export async function addUserCourse(
     throw new Error("Couldn't save this course.");
   }
 
+  const user = auth.user;
+
   if (
-    await courseAlreadySaved(supabase, auth.user.id, {
+    await courseAlreadySaved(supabase, user.id, {
       ...course,
       courseName,
+      catalogCourseId: course.source === "catalog" ? catalogCourseId : null,
     })
   ) {
     return { duplicate: true as const };
@@ -90,17 +109,20 @@ export async function addUserCourse(
   const { data, error } = await supabase
     .from("gpa-calc-user-courses")
     .insert({
-      user_id: auth.user.id,
+      user_id: user.id,
       season: course.season,
       year: course.year,
       source: course.source,
-      catalog_course_id:
-        course.source === "catalog" ? course.catalogCourseId : null,
+      catalog_course_id: course.source === "catalog" ? catalogCourseId : null,
       course_name: courseName,
       ...(course.units !== undefined ? { units: course.units } : {}),
     })
     .select("id, units")
     .single();
+
+  if (error?.code === "23505") {
+    return { duplicate: true as const };
+  }
 
   if (error || !data) {
     throw new Error("Couldn't save this course.");

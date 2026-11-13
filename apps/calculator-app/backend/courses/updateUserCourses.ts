@@ -2,7 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import type { DisplayUserCourse } from "./listUserCourses";
-import { SEASONS, type Season } from "./userCourse";
+import { MAX_COURSE_BATCH, MAX_COURSE_NAME_LENGTH, SEASONS, type Season } from "./userCourse";
 
 const LETTER_GRADES = new Set([
   "A+",
@@ -71,7 +71,13 @@ function courseUpdate(course: DisplayUserCourse): CourseUpdate {
   const year = course.year.trim();
   const letterGrade = course.letterGrade.trim();
 
-  if (!id || !courseName || !isSeason(season) || !/^\d{4}$/.test(year)) {
+  if (
+    !id ||
+    !courseName ||
+    courseName.length > MAX_COURSE_NAME_LENGTH ||
+    !isSeason(season) ||
+    !/^\d{4}$/.test(year)
+  ) {
     throw new Error("Couldn't save these changes.");
   }
 
@@ -90,9 +96,9 @@ function courseUpdate(course: DisplayUserCourse): CourseUpdate {
   };
 }
 
-function displayCourse(course: CourseUpdate, id = course.id): DisplayUserCourse {
+function displayCourse(course: CourseUpdate): DisplayUserCourse {
   return {
-    id,
+    id: course.id,
     courseName: course.courseName,
     season: course.season,
     year: course.year,
@@ -105,61 +111,50 @@ function displayCourse(course: CourseUpdate, id = course.id): DisplayUserCourse 
 export async function updateUserCourses(
   courses: DisplayUserCourse[],
 ): Promise<DisplayUserCourse[]> {
+  if (!Array.isArray(courses) || courses.length > MAX_COURSE_BATCH) {
+    throw new Error("Couldn't save these changes.");
+  }
+
   const updates = courses.map(courseUpdate);
+  const ids = updates.map((course) => course.id);
+  if (new Set(ids).size !== ids.length) {
+    throw new Error("Couldn't save these changes.");
+  }
+
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) {
     throw new Error("Couldn't save these changes.");
   }
 
-  const saved: DisplayUserCourse[] = [];
+  const user = auth.user;
 
-  for (const course of updates) {
-    const changes = {
-      season: course.season,
-      year: course.year,
-      units: course.units,
-      letter_grade: course.letterGrade || null,
-      percent_grade: course.percentGrade || null,
-    };
-
+  if (ids.length > 0) {
     const existing = await supabase
       .from("gpa-calc-user-courses")
       .select("id")
-      .eq("id", course.id)
-      .eq("user_id", auth.user.id)
-      .maybeSingle();
+      .eq("user_id", user.id)
+      .in("id", ids);
 
-    if (existing.error) {
+    if (existing.error || existing.data?.length !== ids.length) {
       throw new Error("Couldn't save these changes.");
     }
+  }
 
-    if (existing.data) {
-      const { data, error } = await supabase
-        .from("gpa-calc-user-courses")
-        .update(changes)
-        .eq("id", course.id)
-        .eq("user_id", auth.user.id)
-        .select("id")
-        .single();
+  const saved: DisplayUserCourse[] = [];
 
-      if (error || !data) {
-        throw new Error("Couldn't save these changes.");
-      }
-
-      saved.push(displayCourse(course));
-      continue;
-    }
-
+  for (const course of updates) {
     const { data, error } = await supabase
       .from("gpa-calc-user-courses")
-      .insert({
-        user_id: auth.user.id,
-        source: "manual",
-        catalog_course_id: null,
-        course_name: course.courseName,
-        ...changes,
+      .update({
+        season: course.season,
+        year: course.year,
+        units: course.units,
+        letter_grade: course.letterGrade || null,
+        percent_grade: course.percentGrade || null,
       })
+      .eq("id", course.id)
+      .eq("user_id", user.id)
       .select("id")
       .single();
 
@@ -167,7 +162,7 @@ export async function updateUserCourses(
       throw new Error("Couldn't save these changes.");
     }
 
-    saved.push(displayCourse(course, data.id));
+    saved.push(displayCourse(course));
   }
 
   return saved;

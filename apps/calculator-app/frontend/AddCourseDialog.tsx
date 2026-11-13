@@ -1,7 +1,8 @@
 "use client";
 
 import { startTransition, useImperativeHandle, useRef, useState, type FormEvent, type MouseEvent, type Ref } from "react";
-import { searchCourses, type CatalogCourse } from "../backend/course-service";
+import { searchCourses } from "../backend/courses/searchCourses";
+import type { CatalogCourse } from "../backend/course-service";
 import type { CourseSelection } from "../backend/courses/userCourse";
 import { CourseDetails } from "./CourseDetails";
 
@@ -92,9 +93,9 @@ export function AddCourseDialog({ ref, onAdd }: AddCourseDialogProps) {
     try {
       const normalized = query.trim();
       setResults(normalized ? await searchCourses(normalized) : []);
-    } catch (error) {
+    } catch {
       setResults([]);
-      setSearchError(error instanceof Error ? error.message : "Unable to search courses.");
+      setSearchError("Couldn't search courses.");
     } finally {
       setLoading(false);
     }

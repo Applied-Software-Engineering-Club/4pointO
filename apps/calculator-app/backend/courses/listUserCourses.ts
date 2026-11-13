@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { GPA_USER_COURSE_COLUMNS } from "./userCourse";
 
 export type DisplayUserCourse = {
   id: string;
@@ -64,7 +65,7 @@ export async function listUserCourses(): Promise<DisplayUserCourse[]> {
 
   const { data, error } = await supabase
     .from("gpa-calc-user-courses")
-    .select("*")
+    .select(GPA_USER_COURSE_COLUMNS)
     .eq("user_id", auth.user.id);
 
   if (error || !Array.isArray(data)) {

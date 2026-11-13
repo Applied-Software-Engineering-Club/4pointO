@@ -1,10 +1,8 @@
 "use client";
 
 import { useRef, useState, type FormEvent, type MouseEvent } from "react";
-import {
-  searchCourses,
-  type CatalogCourse,
-} from "@/apps/calculator-app/backend/course-service";
+import { searchCourses } from "@/apps/calculator-app/backend/courses/searchCourses";
+import type { CatalogCourse } from "@/apps/calculator-app/backend/course-service";
 import type { TranscriptCourse } from "@/apps/course-planner/backend/parseTranscript";
 import { auditDegree, type DegreeProgram } from "@/apps/course-planner/backend/degreeAudit";
 import csProgram from "@/utils/data/programs/computer-science-bs.json";
@@ -106,11 +104,9 @@ export function CoursePlanner() {
     try {
       const normalized = query.trim();
       setResults(normalized ? await searchCourses(normalized) : []);
-    } catch (error) {
+    } catch {
       setResults([]);
-      setSearchError(
-        error instanceof Error ? error.message : "Unable to search courses.",
-      );
+      setSearchError("Couldn't search courses.");
     } finally {
       setLoading(false);
     }
