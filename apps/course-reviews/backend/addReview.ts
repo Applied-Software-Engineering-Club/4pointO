@@ -1,11 +1,14 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { reviewColumns, reviewFromRow, validateReviewDraft, type CourseReview, type ReviewDraft } from "./review";
-
-function isSjsuEmail(email: string | undefined) {
-  return Boolean(email && /^[^@\s]+@sjsu\.edu$/i.test(email));
-}
+import {
+  isSjsuEmail,
+  reviewColumns,
+  reviewFromRow,
+  validateReviewDraft,
+  type CourseReview,
+  type ReviewDraft,
+} from "./review";
 
 export async function addReview(input: ReviewDraft): Promise<CourseReview> {
   const review = validateReviewDraft(input);

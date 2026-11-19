@@ -24,6 +24,8 @@ export type ReviewDraft = {
   difficulty: number | null;
 };
 
+export type VoteDirection = "up" | "down";
+
 export type CourseReview = ReviewDraft & {
   id: string;
   userId: string;
@@ -34,6 +36,14 @@ export type CourseReview = ReviewDraft & {
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isReviewId(value: string) {
+  return UUID.test(value.trim());
+}
+
+export function isSjsuEmail(email: string | undefined) {
+  return Boolean(email && /^[^@\s]+@sjsu\.edu$/i.test(email));
+}
 
 export function normalizeReviewText(value: string) {
   return value.trim().replace(/\s+/g, " ");
