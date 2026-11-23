@@ -25,6 +25,7 @@ export async function addReview(input: ReviewDraft): Promise<CourseReview> {
       tags: review.tags,
       hours_per_week: review.hoursPerWeek,
       difficulty: review.difficulty,
+      grade: review.grade,
     })
     .select(reviewColumns)
     .single();

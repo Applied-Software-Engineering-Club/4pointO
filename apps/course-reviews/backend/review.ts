@@ -10,9 +10,29 @@ export const reviewColumns = [
   "tags",
   "hours_per_week",
   "difficulty",
+  "grade",
   "created_at",
   "updated_at",
 ].join(", ");
+
+/** SJSU letter grades that map onto the 4.0 scale for averages. */
+export const REVIEW_LETTER_GRADES = [
+  "A+",
+  "A",
+  "A-",
+  "B+",
+  "B",
+  "B-",
+  "C+",
+  "C",
+  "C-",
+  "D+",
+  "D",
+  "D-",
+  "F",
+] as const;
+
+export type ReviewLetterGrade = (typeof REVIEW_LETTER_GRADES)[number];
 
 export type ReviewDraft = {
   professor: string;
@@ -22,6 +42,7 @@ export type ReviewDraft = {
   tags: string[];
   hoursPerWeek: number;
   difficulty: number | null;
+  grade: ReviewLetterGrade | null;
 };
 
 export type CourseReview = ReviewDraft & {
@@ -125,6 +146,8 @@ export function validateReviewDraft(input: ReviewDraft): ReviewDraft {
   const difficulty =
     input.difficulty == null ? null : wholeNumber(input.difficulty, "Difficulty", 1, 5);
 
+  const grade = letterGrade(input.grade);
+
   return {
     professor,
     course,
@@ -133,7 +156,25 @@ export function validateReviewDraft(input: ReviewDraft): ReviewDraft {
     tags: normalizedTags,
     hoursPerWeek: wholeNumber(input.hoursPerWeek, "Hours per week", 0, 40),
     difficulty,
+    grade,
   };
+}
+
+function letterGrade(value: unknown): ReviewLetterGrade | null {
+  if (value == null || value === "") {
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    throw new Error("Grade is invalid.");
+  }
+
+  const normalized = value.trim().toUpperCase();
+  if (!(REVIEW_LETTER_GRADES as readonly string[]).includes(normalized)) {
+    throw new Error("Grade is invalid.");
+  }
+
+  return normalized as ReviewLetterGrade;
 }
 
 export function reviewFromRow(row: Record<string, unknown>): CourseReview | null {
@@ -155,6 +196,18 @@ export function reviewFromRow(row: Record<string, unknown>): CourseReview | null
     return null;
   }
 
+  let grade: ReviewLetterGrade | null = null;
+  if (row.grade != null && row.grade !== "") {
+    if (typeof row.grade !== "string") {
+      return null;
+    }
+    const normalized = row.grade.trim().toUpperCase();
+    if (!(REVIEW_LETTER_GRADES as readonly string[]).includes(normalized)) {
+      return null;
+    }
+    grade = normalized as ReviewLetterGrade;
+  }
+
   return {
     id,
     userId,
@@ -167,6 +220,7 @@ export function reviewFromRow(row: Record<string, unknown>): CourseReview | null
     tags: rowTags,
     hoursPerWeek: Number(row.hours_per_week) || 0,
     difficulty,
+    grade,
     createdAt,
     updatedAt,
   };
