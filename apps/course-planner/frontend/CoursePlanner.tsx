@@ -7,6 +7,7 @@ import type { TranscriptCourse } from "@/apps/course-planner/backend/parseTransc
 import { auditDegree, type DegreeProgram } from "@/apps/course-planner/backend/degreeAudit";
 import csProgram from "@/utils/data/programs/computer-science-bs.json";
 import { DegreeChecklist } from "./DegreeChecklist";
+import { ProfessorSearch } from "./ProfessorSearch";
 
 function unitsLabel(course: CatalogCourse) {
   return course.units_min === course.units_max
@@ -192,7 +193,9 @@ export function CoursePlanner() {
           Upload Transcript
         </button>
       </div>
-      <form className="mt-4 max-w-lg" onSubmit={runSearch}>
+      <div className="mt-4 grid grid-cols-1 gap-8 lg:grid-cols-2">
+      <div className="min-w-0">
+      <form className="max-w-lg" onSubmit={runSearch}>
         <label
           className="block text-sm font-medium text-neutral-900"
           htmlFor="course-search"
@@ -258,6 +261,11 @@ export function CoursePlanner() {
             })}
           </ul>
         )}
+      </div>
+      </div>
+      <div className="min-w-0 max-w-lg">
+        <ProfessorSearch />
+      </div>
       </div>
 
       <div className="mt-8">
