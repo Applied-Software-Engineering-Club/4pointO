@@ -5,6 +5,7 @@ import {
   searchProfessors,
   type ProfessorResult,
 } from "@/apps/course-reviews/backend/searchProfessors";
+import { CourseReviews } from "./CourseReviews";
 
 const inputClass =
   "mt-1 w-full rounded-lg border border-neutral-200 bg-transparent px-3 py-2 text-sm font-normal text-neutral-900 outline-none";
@@ -156,28 +157,13 @@ export function ProfessorSearch() {
             ×
           </button>
         </div>
-        {selected && selected.reviews.length > 0 ? (
-          <ul className="mt-4 flex min-h-0 flex-col gap-2 overflow-y-auto">
-            {selected.reviews.map((review) => (
-              <li
-                key={review.id}
-                className="rounded-lg border border-neutral-200 bg-neutral-50 p-3"
-              >
-                <p className="text-xs font-medium text-neutral-900">
-                  {review.course}
-                  <span className="ml-2 font-normal text-neutral-500">
-                    {review.wouldTakeAgain ? "Would take again" : "Would not take again"}
-                  </span>
-                </p>
-                <p className="mt-1 text-sm whitespace-pre-wrap text-neutral-600">
-                  {review.message}
-                </p>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-4 text-sm text-neutral-500">No reviews yet</p>
-        )}
+        {selected ? (
+          <CourseReviews
+            key={selected.name}
+            professor={selected.name}
+            courses={[...new Set(selected.reviews.map((review) => review.course))]}
+          />
+        ) : null}
         <form
           className="mt-4 shrink-0"
           onSubmit={(event) => event.preventDefault()}
