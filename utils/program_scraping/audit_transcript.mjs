@@ -7,9 +7,9 @@
 //   node utils/program_scraping/audit_transcript.mjs ~/Downloads/transcript.pdf utils/data/programs/software-engineering-bs.json
 
 import { readFile } from "node:fs/promises";
-import { createRequire } from "node:module";
 import { auditDegree } from "../../apps/course-planner/backend/degreeAudit.ts";
 import { parseTranscript } from "../../apps/course-planner/backend/parseTranscript.ts";
+import { extractPdfText } from "../pdf/extractPdfText.ts";
 
 const [pdfPath, programPath] = process.argv.slice(2);
 if (!pdfPath || !programPath) {
@@ -17,9 +17,10 @@ if (!pdfPath || !programPath) {
   process.exit(1);
 }
 
-const pdfParse = createRequire(import.meta.url)("pdf-parse/lib/pdf-parse.js");
-const parsed = await pdfParse(await readFile(pdfPath));
-const { courses, externalCredits } = parseTranscript(parsed.text);
+const text = await extractPdfText(new Uint8Array(await readFile(pdfPath)), {
+  timeoutMs: 60_000,
+});
+const { courses, externalCredits } = parseTranscript(text);
 const program = JSON.parse(await readFile(programPath, "utf8"));
 const externalUnits = externalCredits.reduce((total, item) => total + item.units, 0);
 const audit = auditDegree(program, courses, externalUnits);

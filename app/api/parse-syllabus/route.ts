@@ -1,4 +1,6 @@
-import pdfParse from "pdf-parse/lib/pdf-parse.js";
+import { extractPdfText } from "@/utils/pdf/extractPdfText";
+import { PdfReadError } from "@/utils/pdf/pdfReadError";
+import { readUploadedPdf } from "@/utils/pdf/readUploadedPdf";
 
 export const runtime = "nodejs";
 
@@ -83,21 +85,20 @@ function parseSyllabusText(text: string): SyllabusFields {
   return fields;
 }
 
+const unreadable = "The PDF could not be read. Try a text-based syllabus PDF.";
+
 export async function POST(request: Request) {
-  const formData = await request.formData();
-  const file = formData.get("file");
-
-  if (!(file instanceof File) || file.type !== "application/pdf") {
-    return Response.json({ error: "Please upload a PDF syllabus." }, { status: 400 });
-  }
-  if (file.size > 10 * 1024 * 1024) {
-    return Response.json({ error: "The syllabus must be smaller than 10 MB." }, { status: 400 });
-  }
-
   try {
-    const parsed = await pdfParse(Buffer.from(await file.arrayBuffer()));
-    return Response.json(parseSyllabusText(parsed.text));
-  } catch {
-    return Response.json({ error: "The PDF could not be read. Try a text-based syllabus PDF." }, { status: 422 });
+    const bytes = await readUploadedPdf(request, "syllabus");
+    const text = await extractPdfText(bytes, {
+      invalidMessage: "Please upload a PDF syllabus.",
+      unreadableMessage: unreadable,
+    });
+    return Response.json(parseSyllabusText(text));
+  } catch (error) {
+    if (error instanceof PdfReadError) {
+      return Response.json({ error: error.message }, { status: error.status });
+    }
+    return Response.json({ error: unreadable }, { status: 422 });
   }
 }
