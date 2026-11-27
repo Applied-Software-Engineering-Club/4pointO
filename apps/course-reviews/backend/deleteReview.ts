@@ -19,11 +19,11 @@ export async function deleteReview(id: string): Promise<void> {
     throw new Error("Could not remove this review.");
   }
 
+  // Ownership stays in the delete policy. user_id is not readable by students.
   const { data, error } = await supabase
     .from("reviews")
     .delete()
     .eq("id", idValue)
-    .eq("user_id", auth.user.id)
     .select("id");
 
   if (error || !data?.length) {

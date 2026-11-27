@@ -1,6 +1,6 @@
+// user_id stays on the row for the one-review-per-account limit. It is not selected.
 export const reviewColumns = [
   "id",
-  "user_id",
   "professor",
   "course",
   "up_count",
@@ -47,7 +47,6 @@ export type ReviewDraft = {
 
 export type CourseReview = ReviewDraft & {
   id: string;
-  userId: string;
   upCount: number;
   downCount: number;
   createdAt: string;
@@ -179,12 +178,11 @@ function letterGrade(value: unknown): ReviewLetterGrade | null {
 
 export function reviewFromRow(row: Record<string, unknown>): CourseReview | null {
   const id = typeof row.id === "string" ? row.id : "";
-  const userId = typeof row.user_id === "string" ? row.user_id : "";
   const professor = typeof row.professor === "string" ? row.professor : "";
   const course = typeof row.course === "string" ? row.course : "";
   const createdAt = typeof row.created_at === "string" ? row.created_at : "";
   const updatedAt = typeof row.updated_at === "string" ? row.updated_at : "";
-  if (!UUID.test(id) || !UUID.test(userId) || !professor || !course || !createdAt || !updatedAt) {
+  if (!UUID.test(id) || !professor || !course || !createdAt || !updatedAt) {
     return null;
   }
 
@@ -210,7 +208,6 @@ export function reviewFromRow(row: Record<string, unknown>): CourseReview | null
 
   return {
     id,
-    userId,
     professor,
     course,
     upCount: Number(row.up_count) || 0,
