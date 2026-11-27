@@ -1,6 +1,8 @@
+import { isSjsuEmail } from "@/utils/auth/sjsuEmail";
 import { extractPdfText } from "@/utils/pdf/extractPdfText";
 import { PdfReadError } from "@/utils/pdf/pdfReadError";
 import { readUploadedPdf } from "@/utils/pdf/readUploadedPdf";
+import { getAuthUser } from "@/utils/supabase/server";
 
 export const runtime = "nodejs";
 
@@ -88,6 +90,20 @@ function parseSyllabusText(text: string): SyllabusFields {
 const unreadable = "The PDF could not be read. Try a text-based syllabus PDF.";
 
 export async function POST(request: Request) {
+  const user = await getAuthUser();
+  if (!user) {
+    return Response.json(
+      { error: "Sign in with your SJSU account to upload a syllabus." },
+      { status: 401 },
+    );
+  }
+  if (!user.email || !isSjsuEmail(user.email)) {
+    return Response.json(
+      { error: "Use your SJSU email address to upload a syllabus." },
+      { status: 403 },
+    );
+  }
+
   try {
     const bytes = await readUploadedPdf(request, "syllabus");
     const text = await extractPdfText(bytes, {
